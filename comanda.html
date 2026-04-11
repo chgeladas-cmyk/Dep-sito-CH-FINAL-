@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#04060d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CH Geladas">
+<title>Comanda — CH Geladas</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
+:root{--bg:#060810;--border:rgba(255,255,255,0.06);}
+*{box-sizing:border-box;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:#f1f5f9;min-height:100vh;user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+body{background-image:radial-gradient(ellipse at 30% 70%,rgba(168,85,247,.04) 0%,transparent 55%);}
+
+#lock{position:fixed;inset:0;z-index:9999;background:radial-gradient(ellipse at 50% 40%,#0f1a2e 0%,#060810 70%);display:flex;align-items:center;justify-content:center;}
+#lock.hidden{display:none;}
+
+.modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(0,0,0,.8);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s,visibility .2s;}
+.modal.open{opacity:1;visibility:visible;pointer-events:auto;}
+.modal.open>.modal-box{animation:mIn .22s cubic-bezier(.34,1.56,.64,1) forwards;}
+@keyframes mIn{from{opacity:0;transform:scale(.93) translateY(8px);}to{opacity:1;transform:scale(1) translateY(0);}}
+.modal-box{background:rgba(13,17,23,.98);border:1px solid rgba(255,255,255,.09);border-radius:2rem;width:100%;box-shadow:0 32px 64px rgba(0,0,0,.6);}
+
+.inp{font-size:16px!important;padding:12px 14px;color:#fff;background:#1e293b;border:2px solid #334155;border-radius:.75rem;width:100%;outline:none;transition:all .2s;font-family:inherit;}
+.inp:focus{border-color:#a855f7!important;box-shadow:0 0 0 4px rgba(168,85,247,.2)!important;background:#0f172a;}
+.inp::placeholder{color:#64748b;}
+.label{color:#c084fc;font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.35rem;display:block;}
+
+/* COMANDA CARD */
+.cmd-card{background:rgba(13,17,23,.85);border:1px solid rgba(255,255,255,.07);border-radius:1.5rem;padding:1.25rem;transition:all .2s;cursor:pointer;position:relative;overflow:hidden;}
+.cmd-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;border-radius:3px 3px 0 0;}
+.cmd-card.aberta::before{background:linear-gradient(90deg,#a855f7,#ec4899);}
+.cmd-card.paga::before{background:#10b981;}
+.cmd-card:hover{border-color:rgba(168,85,247,.3);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.3);}
+.cmd-card.nova-anim{animation:cardIn .3s cubic-bezier(.34,1.56,.64,1);}
+@keyframes cardIn{from{opacity:0;transform:scale(.9);}to{opacity:1;transform:scale(1);}}
+
+/* PRODUTO CARD no detalhe */
+.prod-mini{background:rgba(13,17,23,.7);border:1px solid rgba(255,255,255,.06);border-left:3px solid #a855f7;border-radius:1rem;padding:.75rem;transition:all .15s;}
+.prod-mini:hover{border-color:rgba(168,85,247,.4);}
+.prod-mini:active{transform:scale(.97);}
+
+/* ITEM DA COMANDA */
+.cmd-item{background:rgba(13,17,23,.6);border:1px solid rgba(255,255,255,.05);border-radius:.875rem;padding:.75rem;display:flex;align-items:center;gap:.75rem;}
+
+.badge{display:inline-flex;align-items:center;border-radius:9999px;font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:.2rem .55rem;}
+.b-purple{background:rgba(168,85,247,.15);color:#c084fc;}
+.b-green{background:rgba(16,185,129,.15);color:#34d399;}
+.b-amber{background:rgba(245,158,11,.15);color:#fbbf24;}
+.b-red{background:rgba(239,68,68,.15);color:#f87171;}
+.b-pink{background:rgba(236,72,153,.15);color:#f472b6;}
+
+.scroll::-webkit-scrollbar{width:3px;}
+.scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:10px;}
+.no-scroll{-ms-overflow-style:none;scrollbar-width:none;}
+.no-scroll::-webkit-scrollbar{display:none;}
+.adm-only{display:none!important;}
+body.is-admin .adm-only{display:flex!important;}
+
+#toast{min-width:220px;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(4rem);opacity:0;pointer-events:none;z-index:200;transition:opacity .25s,transform .25s;background:rgba(13,17,23,.98);border:1px solid rgba(255,255,255,.09);border-radius:1.25rem;padding:1rem 1.25rem;display:flex;align-items:center;gap:.75rem;box-shadow:0 24px 48px rgba(0,0,0,.5);}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* VISTA */
+.vista{display:none;}
+.vista.ativa{display:block;}
+</style>
+</head>
+<body>
+
+<!-- LOCK -->
+<div id="lock">
+  <div style="background:rgba(13,17,23,.95);border:1px solid rgba(255,255,255,.08);border-radius:2.5rem;padding:2.5rem;width:100%;max-width:360px;margin:0 1rem;text-align:center;box-shadow:0 40px 80px rgba(0,0,0,.8);">
+    <div class="text-5xl mb-4">🍽️</div>
+    <h1 class="text-2xl font-black mb-1 uppercase tracking-tight">CH <span class="text-purple-400">GELADAS</span></h1>
+    <p class="text-[9px] text-slate-600 font-bold uppercase tracking-widest mb-8">Módulo de Comandas</p>
+    <input type="password" id="pinInput" autocomplete="current-password" inputmode="numeric"
+      class="w-full bg-slate-950 border-2 border-slate-800 focus:border-purple-500 p-5 rounded-2xl text-center text-2xl outline-none text-white tracking-[.4em] transition-all font-mono mb-4"
+      placeholder="· · · · ·" maxlength="8">
+    <div id="lockError" class="hidden text-[10px] text-red-400 font-bold mb-3"></div>
+    <button onclick="doLogin()" class="w-full bg-purple-700 hover:bg-purple-600 py-4 rounded-xl font-black uppercase text-xs tracking-widest transition-all">
+      <i class="fas fa-unlock-alt mr-2"></i>Entrar
+    </button>
+    <div class="mt-6"><a href="index.html" class="text-[9px] text-slate-700 hover:text-slate-500 font-bold uppercase tracking-widest transition-colors">← Hub Principal</a></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden flex flex-col min-h-screen">
+
+  <!-- HEADER -->
+  <header class="sticky top-0 z-40 px-4 py-3 flex justify-between items-center" style="background:rgba(6,8,16,.96);border-bottom:1px solid rgba(255,255,255,.04);">
+    <div class="flex items-center gap-3">
+      <button id="btnVoltar" onclick="voltarLista()" class="hidden w-8 h-8 rounded-xl bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-all">
+        <i class="fas fa-arrow-left text-xs"></i>
+      </button>
+      <span class="text-2xl">🍽️</span>
+      <div>
+        <h1 id="headerTitulo" class="text-[10px] font-black uppercase tracking-widest text-purple-400">Comandas</h1>
+        <p id="clock" class="text-[9px] font-mono text-slate-600 mt-0.5">00:00:00</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="btnRelatorio" onclick="abrirRelatorio()" class="w-8 h-8 rounded-lg bg-slate-900 border border-white/5 flex items-center justify-center text-slate-500 hover:text-purple-400 transition-all" title="Relatório">
+        <i class="fas fa-chart-bar text-xs"></i>
+      </button>
+      <button id="btnNovaComanda" onclick="novaComanda()" class="bg-purple-700 hover:bg-purple-600 text-white px-3 py-2 rounded-xl font-black text-[9px] uppercase tracking-wide transition-all flex items-center gap-1.5">
+        <i class="fas fa-plus text-[9px]"></i>Nova
+      </button>
+      <button onclick="resetComandas()" class="adm-only w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-all" title="Reset comandas">
+        <i class="fas fa-redo text-xs"></i>
+      </button>
+      <button onclick="logout()" class="w-8 h-8 rounded-lg bg-slate-900 border border-white/5 flex items-center justify-center text-slate-500 hover:text-red-400 transition-all">
+        <i class="fas fa-power-off text-xs"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- VISTA LISTA -->
+  <div id="vistaLista" class="vista ativa flex-1 p-3 pb-24">
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-3 gap-2 mb-3">
+      <div class="bg-purple-500/8 border border-purple-500/15 rounded-2xl p-3 text-center">
+        <p class="text-[8px] text-purple-400 font-black uppercase tracking-wider mb-1">Abertas</p>
+        <p id="kpiAbertas" class="text-xl font-black text-purple-300">0</p>
+      </div>
+      <div class="bg-pink-500/8 border border-pink-500/15 rounded-2xl p-3 text-center">
+        <p class="text-[8px] text-pink-400 font-black uppercase tracking-wider mb-1">Em Aberto</p>
+        <p id="kpiValor" class="text-xl font-black text-pink-300">R$ 0</p>
+      </div>
+      <div class="bg-emerald-500/8 border border-emerald-500/15 rounded-2xl p-3 text-center">
+        <p class="text-[8px] text-emerald-400 font-black uppercase tracking-wider mb-1">Pagas Hoje</p>
+        <p id="kpiPagas" class="text-xl font-black text-emerald-300">0</p>
+      </div>
+    </div>
+
+    <!-- Grade de comandas -->
+    <div id="gradeComandas" class="grid grid-cols-2 lg:grid-cols-4 gap-3"></div>
+  </div>
+
+  <!-- VISTA DETALHE -->
+  <div id="vistaDetalhe" class="vista flex-1 flex flex-col" style="max-height:calc(100vh - 60px);">
+    <div class="flex-1 grid lg:grid-cols-2 gap-3 p-3 overflow-hidden">
+
+      <!-- Catálogo -->
+      <div class="flex flex-col gap-2 overflow-hidden">
+        <input type="search" id="cmdBusca" oninput="renderCatalogoCmda()" class="inp !py-2.5 !text-xs" placeholder="Buscar produto...">
+        <div id="catalogoCmda" class="grid grid-cols-2 gap-2 overflow-y-auto scroll flex-1"></div>
+      </div>
+
+      <!-- Itens da comanda -->
+      <div class="flex flex-col gap-2 overflow-hidden">
+        <div class="flex items-center justify-between px-1">
+          <span class="text-[9px] font-black uppercase tracking-wider text-slate-400">Itens da Comanda</span>
+          <span id="cmdDetQtd" class="badge b-purple text-[8px]">0 itens</span>
+        </div>
+        <div id="cmdItens" class="flex-1 overflow-y-auto scroll space-y-1.5"></div>
+        <div class="bg-slate-900/80 border border-white/5 rounded-2xl px-4 py-3 flex items-center justify-between flex-shrink-0">
+          <span class="text-[9px] font-black uppercase text-slate-400">Total</span>
+          <span id="cmdTotal" class="text-2xl font-black text-white">R$ 0,00</span>
+        </div>
+        <button id="btnFecharConta" onclick="abrirFechamento()" disabled
+          class="w-full py-3.5 rounded-xl bg-slate-800 text-slate-500 font-black uppercase text-xs tracking-wide transition-all cursor-not-allowed flex-shrink-0">
+          <i class="fas fa-lock mr-2"></i>Adicione itens para fechar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ MODAL NOVA COMANDA ══════ -->
+<div id="modalNovaComanda" class="modal">
+  <div class="modal-box max-w-sm p-8">
+    <div class="text-center mb-6">
+      <div class="w-14 h-14 bg-purple-500/20 text-purple-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl">🍽️</div>
+      <h2 class="text-xl font-black">Nova Comanda</h2>
+    </div>
+    <label class="label">Nome da Mesa / Cliente</label>
+    <input type="text" id="novaComandaNome" class="inp mb-6" placeholder="Ex: Mesa 1, João Silva...">
+    <div class="flex gap-3">
+      <button onclick="confirmarNovaComanda()" class="flex-1 bg-purple-700 hover:bg-purple-600 py-4 rounded-xl font-black uppercase text-xs text-white transition-all">
+        <i class="fas fa-check mr-2"></i>Abrir Comanda
+      </button>
+      <button onclick="UIService.closeModal('modalNovaComanda')" class="bg-slate-800 px-5 rounded-xl font-black uppercase text-xs text-slate-400">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ MODAL FECHAR CONTA ══════ -->
+<div id="modalFecharConta" class="modal">
+  <div class="modal-box max-w-sm overflow-hidden">
+    <div class="p-5 border-b border-white/5 flex items-center justify-between">
+      <h3 class="text-sm font-black text-emerald-400 flex items-center gap-2"><i class="fas fa-check-circle"></i> Fechar Conta</h3>
+      <button onclick="UIService.closeModal('modalFecharConta')" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
+    </div>
+    <div class="p-5 space-y-3">
+      <div class="bg-slate-900/60 border border-white/5 rounded-2xl p-4">
+        <p id="fechNomeComanda" class="text-sm font-black text-white mb-1"></p>
+        <div id="fechItens" class="space-y-1 max-h-36 overflow-y-auto scroll mt-2"></div>
+        <div class="flex justify-between items-center pt-3 border-t border-white/5 mt-3">
+          <span class="text-[10px] font-black uppercase text-slate-400">Total</span>
+          <span id="fechTotal" class="text-xl font-black text-white">R$ 0,00</span>
+        </div>
+      </div>
+      <p class="text-[10px] text-slate-500 font-bold uppercase text-center">Forma de Pagamento</p>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="confirmarFechamento('Dinheiro')"  class="py-4 rounded-2xl bg-emerald-600/20 border border-emerald-500/25 text-emerald-300 font-black text-[10px] uppercase hover:bg-emerald-600/35 transition-all active:scale-95 flex flex-col items-center gap-1"><i class="fas fa-money-bill-wave text-xl"></i>Dinheiro</button>
+        <button onclick="confirmarFechamento('Pix')"       class="py-4 rounded-2xl bg-blue-600/20 border border-blue-500/25 text-blue-300 font-black text-[10px] uppercase hover:bg-blue-600/35 transition-all active:scale-95 flex flex-col items-center gap-1"><i class="fas fa-qrcode text-xl"></i>Pix</button>
+        <button onclick="confirmarFechamento('Débito')"    class="py-4 rounded-2xl bg-purple-600/20 border border-purple-500/25 text-purple-300 font-black text-[10px] uppercase hover:bg-purple-600/35 transition-all active:scale-95 flex flex-col items-center gap-1"><i class="fas fa-credit-card text-xl"></i>Débito</button>
+        <button onclick="confirmarFechamento('Crédito')"   class="py-4 rounded-2xl bg-amber-600/20 border border-amber-500/25 text-amber-300 font-black text-[10px] uppercase hover:bg-amber-600/35 transition-all active:scale-95 flex flex-col items-center gap-1"><i class="fas fa-credit-card text-xl"></i>Crédito</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ MODAL RELATÓRIO ══════ -->
+<div id="modalRelatorio" class="modal">
+  <div class="modal-box max-w-sm p-0 overflow-hidden">
+    <div class="p-5 border-b border-white/5 flex items-center justify-between">
+      <div>
+        <h3 class="text-sm font-black text-purple-400 flex items-center gap-2"><i class="fas fa-receipt"></i> Relatório de Comandas</h3>
+        <p id="relData" class="text-[9px] text-slate-500 font-bold mt-0.5"></p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="copiarRelatorio()" class="w-8 h-8 rounded-lg bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 flex items-center justify-center"><i class="fas fa-copy text-sm"></i></button>
+        <button onclick="baixarRelatorio()" class="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 flex items-center justify-center"><i class="fas fa-download text-sm"></i></button>
+        <button onclick="UIService.closeModal('modalRelatorio')" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
+      </div>
+    </div>
+    <div class="overflow-y-auto scroll" style="max-height:76vh;">
+      <div class="grid grid-cols-2 gap-3 p-5 border-b border-white/5">
+        <div class="bg-slate-900/60 border border-white/5 rounded-2xl p-3 text-center">
+          <p class="text-[8px] text-slate-500 font-black uppercase mb-1">Total Faturado</p>
+          <p id="relFatur" class="text-xl font-black text-white">R$ 0,00</p>
+        </div>
+        <div class="bg-slate-900/60 border border-white/5 rounded-2xl p-3 text-center">
+          <p class="text-[8px] text-slate-500 font-black uppercase mb-1">Comandas Fechadas</p>
+          <p id="relFechadas" class="text-xl font-black text-emerald-400">0</p>
+        </div>
+        <div class="bg-purple-500/8 border border-purple-500/15 rounded-2xl p-3 text-center">
+          <p class="text-[8px] text-purple-400 font-black uppercase mb-1">Ainda Abertas</p>
+          <p id="relAbertas" class="text-xl font-black text-purple-300">0</p>
+        </div>
+        <div class="bg-amber-500/8 border border-amber-500/15 rounded-2xl p-3 text-center">
+          <p class="text-[8px] text-amber-400 font-black uppercase mb-1">Ticket Médio</p>
+          <p id="relTicket" class="text-xl font-black text-amber-400">R$ 0,00</p>
+        </div>
+      </div>
+      <div class="p-5 border-b border-white/5">
+        <p class="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3">Comandas do Dia</p>
+        <div id="relLista" class="space-y-2 max-h-56 overflow-y-auto scroll"></div>
+      </div>
+      <div class="p-5">
+        <p class="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3">Top Produtos (Hoje)</p>
+        <div id="relTopProd" class="space-y-1.5"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast">
+  <div id="toastIcon" class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-black"></div>
+  <div><span id="toastMsg" class="text-[11px] font-black uppercase tracking-wide block"></span><span id="toastSub" class="text-[9px] text-slate-500 font-bold"></span></div>
+</div>
+
+<script src="core.js"></script>
+  <script src="./services/syncService.js"></script>
+  <script src="./services/auditService.js"></script>
+  <script src="./services/syncMonitor.js"></script>
+  <script src="./services/backupService.js"></script>
+  <script src="./services/estoqueService.js"></script>
+  <script src="./services/financeiroService.js"></script>
+  <script src="./services/vendasService.js"></script>
+
+<script>
+'use strict';
+
+/* ════════════════════════════════
+   LOGIN
+════════════════════════════════ */
+async function doLogin() {
+  const pin = document.getElementById('pinInput').value.trim();
+  const ok  = await AuthService.login(pin);
+  if (ok) {
+    document.getElementById('lock').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    init();
+  } else {
+    const err = document.getElementById('lockError');
+    err.textContent = 'PIN incorreto.';
+    err.classList.remove('hidden');
+    document.getElementById('pinInput').value = '';
+  }
+}
+document.getElementById('pinInput').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+function logout() { if (!confirm('Encerrar sessão?')) return; AuthService.logout(); location.reload(); }
+
+/* ══ RESET COMANDAS ══ */
+function resetComandas() {
+  if (!AuthService.isAdmin()) { UIService.showToast('Apenas ADM','','error'); return; }
+  const abertas = Store.getComandas().filter(c => c.status !== 'fechada');
+  if (abertas.length > 0) {
+    if (!confirm(`⚠️ Existem ${abertas.length} comanda(s) abertas!\n\nO reset irá fechar e arquivar TODAS as comandas, incluindo as abertas.\n\nDeseja continuar?`)) return;
+  } else {
+    if (!confirm('Resetar todas as comandas?\nEsta ação limpará o painel de comandas.')) return;
+  }
+  Store.mutateComandas(cmds => { cmds.splice(0, cmds.length); });
+  _cmdAtualId = null;
+  mostrarVista('lista');
+  UIService.showToast('Comandas resetadas!', 'Painel limpo', 'warning');
+}
+
+/* ════════════════════════════════
+   ESTADO
+════════════════════════════════ */
+let _cmdAtualId = null;  // id da comanda aberta no detalhe
+
+/* ════════════════════════════════
+   INIT
+════════════════════════════════ */
+function init() {
+  UIService.startClock('clock');
+  if (AuthService.isAdmin()) document.body.classList.add('is-admin');
+  renderGrade();
+  atualizarKpis();
+  EventBus.on('store:updated', () => {
+    atualizarKpis();
+    if (_cmdAtualId) renderDetalhe(); else renderGrade();
+  });
+}
+
+/* ════════════════════════════════
+   VISTAS
+════════════════════════════════ */
+function mostrarVista(vista) {
+  document.getElementById('vistaLista').classList.toggle('ativa', vista === 'lista');
+  document.getElementById('vistaDetalhe').classList.toggle('ativa', vista === 'detalhe');
+  document.getElementById('btnVoltar').classList.toggle('hidden', vista === 'lista');
+  document.getElementById('btnNovaComanda').classList.toggle('hidden', vista === 'detalhe');
+  document.getElementById('btnRelatorio').classList.toggle('hidden', vista === 'detalhe');
+}
+
+function voltarLista() {
+  _cmdAtualId = null;
+  document.getElementById('headerTitulo').textContent = 'Comandas';
+  mostrarVista('lista');
+  renderGrade();
+  atualizarKpis();
+}
+
+/* ════════════════════════════════
+   KPIs
+════════════════════════════════ */
+function atualizarKpis() {
+  const hoje     = Utils.todayISO();
+  const todas    = Store.getComandas();
+  const abertas  = todas.filter(c => c.status === 'aberta');
+  const pagas    = todas.filter(c => c.status === 'paga' && c.fechadoEm?.slice(0,10) === hoje);
+  const valorAb  = abertas.reduce((s,c) => s + calcTotalComanda(c), 0);
+
+  _set('kpiAbertas', abertas.length);
+  _set('kpiValor',   'R$ ' + Math.round(valorAb));
+  _set('kpiPagas',   pagas.length);
+}
+
+/* ════════════════════════════════
+   GRADE DE COMANDAS
+════════════════════════════════ */
+function renderGrade() {
+  const el   = document.getElementById('gradeComandas');
+  if (!el) return;
+  const todas = Store.getComandas();
+
+  // Abertas primeiro, depois pagas hoje
+  const hoje   = Utils.todayISO();
+  const abertas = todas.filter(c => c.status === 'aberta');
+  const pagas   = todas.filter(c => c.status === 'paga' && c.fechadoEm?.slice(0,10) === hoje);
+  const lista   = [...abertas, ...pagas];
+
+  if (lista.length === 0) {
+    el.innerHTML = `<div class="col-span-2 lg:col-span-4 flex flex-col items-center justify-center py-24 opacity-30">
+      <i class="fas fa-utensils text-5xl text-slate-600 mb-4"></i>
+      <p class="text-[10px] font-black uppercase tracking-widest text-slate-600">Nenhuma comanda aberta</p>
+      <button onclick="novaComanda()" class="mt-4 bg-purple-700 hover:bg-purple-600 text-white px-4 py-2 rounded-xl font-black text-xs uppercase transition-all">+ Nova Comanda</button>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = lista.map(c => {
+    const total    = calcTotalComanda(c);
+    const qtdItens = (c.itens||[]).reduce((s,i) => s + i.qtd, 0);
+    const paga     = c.status === 'paga';
+    const tempo    = _tempoDecorrido(c.criadoEm);
+
+    return `<div class="cmd-card ${paga ? 'paga' : 'aberta'}" onclick="${paga ? '' : `abrirComanda('${c.id}')`}">
+      <div class="flex justify-between items-start mb-3">
+        <div class="flex-1 min-w-0">
+          <p class="text-[13px] font-black text-white truncate">${c.nome}</p>
+          <p class="text-[8px] text-slate-500 font-bold mt-0.5">${tempo}</p>
+        </div>
+        <span class="badge ${paga ? 'b-green' : 'b-purple'} flex-shrink-0 ml-2">${paga ? '✓ Paga' : 'Aberta'}</span>
+      </div>
+      <div class="flex items-end justify-between">
+        <div>
+          <p class="text-xl font-black ${paga ? 'text-emerald-400' : 'text-white'}">${Utils.formatCurrency(total)}</p>
+          <p class="text-[8px] text-slate-500 font-bold">${qtdItens} item${qtdItens!==1?'s':''}</p>
+        </div>
+        ${!paga ? `<button onclick="event.stopPropagation();abrirComanda('${c.id}')" class="bg-purple-700/30 border border-purple-500/30 text-purple-300 px-3 py-1.5 rounded-xl font-black text-[9px] uppercase hover:bg-purple-700/50 transition-all">Abrir →</button>` : ''}
+        ${paga ? `<p class="text-[8px] text-emerald-400 font-bold">${c.formaPgto||''}</p>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ════════════════════════════════
+   ABRIR COMANDA (detalhe)
+════════════════════════════════ */
+function abrirComanda(id) {
+  _cmdAtualId = id;
+  const cmd   = Store.getComandas().find(c => c.id === id);
+  if (!cmd) return;
+  document.getElementById('headerTitulo').textContent = cmd.nome;
+  mostrarVista('detalhe');
+  renderCatalogoCmda();
+  renderDetalhe();
+}
+
+/* ════════════════════════════════
+   CATÁLOGO NO DETALHE
+════════════════════════════════ */
+function renderCatalogoCmda() {
+  const busca = (document.getElementById('cmdBusca')?.value||'').toLowerCase();
+  const el    = document.getElementById('catalogoCmda');
+  if (!el) return;
+  let prods   = Store.getEstoque();
+  if (busca) prods = prods.filter(p => (p.nome||'').toLowerCase().includes(busca));
+  if (prods.length === 0) {
+    el.innerHTML = `<div class="col-span-2 text-center py-8 opacity-30"><i class="fas fa-box-open text-3xl text-slate-600 mb-2 block"></i><p class="text-[9px] font-black uppercase text-slate-600">Sem produtos</p></div>`;
+    return;
+  }
+  el.innerHTML = prods.map(p => {
+    const esg = (p.qtdUn||0) <= 0;
+    return `<div class="prod-mini ${esg ? 'opacity-40' : ''}" onclick="${esg ? '' : `addItemComanda('${p.id}')`}">
+      <p class="text-[11px] font-black text-white leading-tight mb-1">${p.nome}</p>
+      <p class="text-sm font-black text-purple-400">${Utils.formatCurrency(p.precoUn||0)}</p>
+      ${esg ? '<span class="badge b-red text-[7px] mt-1">Esgotado</span>' : `<span class="text-[8px] text-slate-500 font-bold">${p.qtdUn} un</span>`}
+    </div>`;
+  }).join('');
+}
+
+/* ════════════════════════════════
+   ADICIONAR ITEM À COMANDA
+════════════════════════════════ */
+function addItemComanda(prodId) {
+  if (!_cmdAtualId) return;
+  const prod = Store.getEstoque().find(p => p.id === prodId);
+  if (!prod || prod.qtdUn <= 0) { UIService.showToast('Produto esgotado', '', 'error'); return; }
+
+  Store.mutateComandas(cmds => {
+    const cmd = cmds.find(c => c.id === _cmdAtualId);
+    if (!cmd) return;
+    if (!Array.isArray(cmd.itens)) cmd.itens = [];
+    const idx = cmd.itens.findIndex(i => i.prodId === prodId);
+    if (idx >= 0) { cmd.itens[idx].qtd++; }
+    else { cmd.itens.push({ prodId, nome: prod.nome, preco: prod.precoUn||0, custo: prod.custoUn||0, qtd: 1 }); }
+  });
+
+  renderDetalhe();
+  UIService.showToast(`+1 ${prod.nome}`, Utils.formatCurrency(prod.precoUn||0), 'success');
+}
+
+/* ════════════════════════════════
+   RENDER DETALHE
+════════════════════════════════ */
+function renderDetalhe() {
+  const cmd = Store.getComandas().find(c => c.id === _cmdAtualId);
+  if (!cmd) return;
+  const itens = cmd.itens||[];
+  const total = calcTotalComanda(cmd);
+
+  // Itens
+  const el = document.getElementById('cmdItens');
+  if (el) {
+    if (itens.length === 0) {
+      el.innerHTML = `<div class="flex flex-col items-center justify-center py-12 opacity-20">
+        <i class="fas fa-receipt text-3xl text-slate-600 mb-2"></i>
+        <p class="text-[9px] font-black uppercase text-slate-600">Nenhum item adicionado</p>
+      </div>`;
+    } else {
+      el.innerHTML = itens.map((item, idx) => `
+        <div class="cmd-item">
+          <div class="flex-1 min-w-0">
+            <p class="text-[11px] font-black text-white truncate">${item.nome}</p>
+            <p class="text-[9px] text-slate-500 font-bold">${Utils.formatCurrency(item.preco)} × ${item.qtd} = ${Utils.formatCurrency(item.preco*item.qtd)}</p>
+          </div>
+          <div class="flex items-center gap-1.5 flex-shrink-0">
+            <button onclick="alterarQtdComanda(${idx}, -1)" class="w-7 h-7 rounded-lg bg-slate-800 text-red-400 hover:bg-red-500/15 flex items-center justify-center font-black transition-all text-sm">−</button>
+            <span class="text-[11px] font-black text-white w-5 text-center">${item.qtd}</span>
+            <button onclick="alterarQtdComanda(${idx}, 1)" class="w-7 h-7 rounded-lg bg-slate-800 text-emerald-400 hover:bg-emerald-500/15 flex items-center justify-center font-black transition-all text-sm">+</button>
+            <button onclick="removerItemComanda(${idx})" class="w-7 h-7 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center justify-center transition-all ml-1"><i class="fas fa-times text-[9px]"></i></button>
+          </div>
+        </div>`).join('');
+    }
+  }
+
+  // Qtd badge
+  const qtdTotal = itens.reduce((s,i)=>s+i.qtd,0);
+  _set('cmdDetQtd', `${qtdTotal} item${qtdTotal!==1?'s':''}`);
+  _set('cmdTotal', Utils.formatCurrency(total));
+
+  // Botão fechar
+  const btn = document.getElementById('btnFecharConta');
+  if (btn) {
+    const vazio = itens.length === 0;
+    btn.disabled = vazio;
+    if (vazio) {
+      btn.className = 'w-full py-3.5 rounded-xl bg-slate-800 text-slate-500 font-black uppercase text-xs tracking-wide transition-all cursor-not-allowed flex-shrink-0';
+      btn.innerHTML = '<i class="fas fa-lock mr-2"></i>Adicione itens para fechar';
+    } else {
+      btn.className = 'w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black uppercase text-xs tracking-wide transition-all active:scale-95 flex-shrink-0';
+      btn.innerHTML = `<i class="fas fa-check mr-2"></i>Fechar Conta — ${Utils.formatCurrency(total)}`;
+    }
+  }
+}
+
+/* ════════════════════════════════
+   ALTERAR / REMOVER ITEM
+════════════════════════════════ */
+function alterarQtdComanda(idx, delta) {
+  Store.mutateComandas(cmds => {
+    const cmd = cmds.find(c => c.id === _cmdAtualId);
+    if (!cmd) return;
+    const novaQtd = (cmd.itens[idx]?.qtd||0) + delta;
+    if (novaQtd <= 0) cmd.itens.splice(idx, 1);
+    else cmd.itens[idx].qtd = novaQtd;
+  });
+  renderDetalhe();
+}
+
+function removerItemComanda(idx) {
+  Store.mutateComandas(cmds => {
+    const cmd = cmds.find(c => c.id === _cmdAtualId);
+    if (cmd) cmd.itens.splice(idx, 1);
+  });
+  renderDetalhe();
+}
+
+/* ════════════════════════════════
+   NOVA COMANDA
+════════════════════════════════ */
+function novaComanda() {
+  document.getElementById('novaComandaNome').value = '';
+  UIService.openModal('modalNovaComanda');
+  setTimeout(() => document.getElementById('novaComandaNome')?.focus(), 200);
+}
+
+document.getElementById('novaComandaNome')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') confirmarNovaComanda();
+});
+
+function confirmarNovaComanda() {
+  const nome = (document.getElementById('novaComandaNome')?.value||'').trim();
+  if (!nome) { UIService.showToast('Nome obrigatório', '', 'error'); return; }
+
+  const novaCmd = {
+    id:        Utils.generateId(),
+    nome,
+    status:    'aberta',
+    itens:     [],
+    criadoEm:  new Date().toISOString(),
+    dataCurta: Utils.todayISO(),
+  };
+
+  Store.mutateComandas(cmds => { cmds.unshift(novaCmd); });
+
+  UIService.closeModal('modalNovaComanda');
+  UIService.showToast(`Comanda aberta!`, nome, 'success');
+  renderGrade();
+  atualizarKpis();
+
+  // Abre direto no detalhe
+  abrirComanda(novaCmd.id);
+}
+
+/* ════════════════════════════════
+   FECHAR CONTA
+════════════════════════════════ */
+function abrirFechamento() {
+  const cmd = Store.getComandas().find(c => c.id === _cmdAtualId);
+  if (!cmd || !cmd.itens?.length) return;
+  const total = calcTotalComanda(cmd);
+
+  _set('fechNomeComanda', cmd.nome);
+  _set('fechTotal', Utils.formatCurrency(total));
+
+  const itensEl = document.getElementById('fechItens');
+  if (itensEl) itensEl.innerHTML = (cmd.itens||[]).map(i =>
+    `<div class="flex justify-between text-[10px] font-bold">
+      <span class="text-slate-400">${i.nome} × ${i.qtd}</span>
+      <span class="text-white">${Utils.formatCurrency(i.preco*i.qtd)}</span>
+    </div>`
+  ).join('');
+
+  UIService.openModal('modalFecharConta');
+}
+
+async function confirmarFechamento(forma) {
+  const cmd = Store.getComandas().find(c => c.id === _cmdAtualId);
+  if (!cmd) return;
+
+  const total  = calcTotalComanda(cmd);
+  const lucro  = (cmd.itens||[]).reduce((s,i) => s + (i.preco - (i.custo||0)) * i.qtd, 0);
+  const itens  = (cmd.itens||[]).map(i => ({
+    prodId: i.prodId, nome: i.nome,
+    preco:  i.preco,  custo: i.custo||0,
+    label: 'UNID',   qtd:  i.qtd,
+  }));
+
+  // Monta objeto que imita CartService para VendasService.finalizarVenda
+  const cartProxy = {
+    getItems:     () => itens,
+    getTotal:     () => total,
+    getSubtotal:  () => total,
+    getDesconto:  () => 0,
+    clear:        () => {},  // não limpa nada — comanda fecha via mutateComandas abaixo
+  };
+
+  let venda;
+  if (window.CH?.VendasService) {
+    // Usa VendasService: Transaction Firebase + baixa estoque + registra financeiro
+    try {
+      venda = await window.CH.VendasService.finalizarVenda(cartProxy, forma);
+      venda.origem      = 'COMANDA';
+      venda.nomeComanda = cmd.nome;
+    } catch(e) {
+      console.warn('[Comanda] VendasService falhou, fallback local:', e.message);
+      venda = null;
+    }
+  }
+
+  // Fallback legado (se VendasService não disponível ou falhou)
+  if (!venda) {
+    venda = {
+      id: Utils.generateId(), dataCurta: Utils.todayISO(),
+      data: Utils.today(), hora: Utils.nowTime(),
+      criadoEm: new Date().toISOString(),
+      itens, total, lucro, subtotal: total, desconto: 0,
+      formaPgto: forma, origem: 'COMANDA', nomeComanda: cmd.nome,
+    };
+    Store.mutateVendas(vendas => { vendas.unshift(venda); });
+    Store.mutateEstoque(est => {
+      itens.forEach(item => {
+        const prod = est.find(p => p.id === item.prodId);
+        if (prod) prod.qtdUn = Math.max(0, (prod.qtdUn||0) - item.qtd);
+      });
+    });
+    EventBus.emit('venda:finalizada', venda);
+  }
+
+  // Fecha a comanda
+  Store.mutateComandas(cmds => {
+    const idx = cmds.findIndex(c => c.id === _cmdAtualId);
+    if (idx >= 0) {
+      cmds[idx].status    = 'paga';
+      cmds[idx].formaPgto = forma;
+      cmds[idx].fechadoEm = new Date().toISOString();
+      cmds[idx].total     = total;
+      cmds[idx].vendaId   = venda?.id || null;
+    }
+  });
+
+  UIService.closeModal('modalFecharConta');
+  UIService.showToast('Conta fechada!', `${cmd.nome} — ${Utils.formatCurrency(total)}`, 'success');
+
+  // Notificação Telegram
+  const itensComanda = itens.map(i => `  · ${i.nome} x${i.qtd}  ${Utils.formatCurrency(i.preco*i.qtd)}`).join('\n');
+  TelegramService.enviar(
+    `🍽️ <b>Comanda Fechada — CH Geladas</b>\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `📋 <b>Mesa/Comanda:</b> ${cmd.nome}\n` +
+    `${itensComanda}\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `💳 <b>Pgto:</b> ${forma.toUpperCase()}\n` +
+    `💰 <b>Total:</b> ${Utils.formatCurrency(total)}\n` +
+    `🕐 <b>Hora:</b> ${Utils.nowTime()}`
+  );
+
+  voltarLista();
+}
+
+/* ════════════════════════════════
+   UTILITÁRIOS
+════════════════════════════════ */
+function calcTotalComanda(cmd) {
+  return (cmd.itens||[]).reduce((s,i) => s + (i.preco||0)*i.qtd, 0);
+}
+
+function _tempoDecorrido(iso) {
+  if (!iso) return '—';
+  const diff = Date.now() - new Date(iso).getTime();
+  const min  = Math.floor(diff / 60000);
+  if (min < 1)  return 'Agora';
+  if (min < 60) return `${min}min`;
+  const h = Math.floor(min/60);
+  return `${h}h${min%60 > 0 ? String(min%60).padStart(2,'0')+'min' : ''}`;
+}
+
+function _set(id, val) { const el = document.getElementById(id); if (el) el.textContent = val; }
+
+/* ════════════════════════════════
+   RELATÓRIO
+════════════════════════════════ */
+function abrirRelatorio() {
+  const hoje    = Utils.todayISO();
+  const todas   = Store.getComandas();
+  const abertas = todas.filter(c => c.status === 'aberta');
+  const pagas   = todas.filter(c => c.status === 'paga' && c.fechadoEm?.slice(0,10) === hoje);
+  const fatur   = pagas.reduce((s,c) => s + (c.total||calcTotalComanda(c)), 0);
+  const ticket  = pagas.length ? fatur/pagas.length : 0;
+
+  _set('relFatur',    Utils.formatCurrency(fatur));
+  _set('relFechadas', pagas.length);
+  _set('relAbertas',  abertas.length);
+  _set('relTicket',   Utils.formatCurrency(ticket));
+  _set('relData',     'Hoje — ' + Utils.today());
+
+  // Lista do dia
+  const listaEl = document.getElementById('relLista');
+  if (listaEl) {
+    const itens = [...abertas, ...pagas];
+    listaEl.innerHTML = itens.map(c => {
+      const total = c.total||calcTotalComanda(c);
+      const paga  = c.status === 'paga';
+      return `<div class="flex items-center justify-between bg-slate-900/60 border border-white/5 rounded-xl px-3 py-2.5">
+        <div>
+          <p class="text-[10px] font-black text-white">${c.nome}</p>
+          <p class="text-[8px] text-slate-500 font-bold">${_tempoDecorrido(c.criadoEm)} · ${(c.itens||[]).reduce((s,i)=>s+i.qtd,0)} itens</p>
+        </div>
+        <div class="text-right">
+          <p class="text-[11px] font-black ${paga?'text-emerald-400':'text-purple-400'}">${Utils.formatCurrency(total)}</p>
+          <span class="badge ${paga?'b-green':'b-purple'} text-[7px]">${paga?'Paga':'Aberta'}</span>
+        </div>
+      </div>`;
+    }).join('') || '<p class="text-[9px] text-slate-600 text-center py-4 font-bold">Nenhuma comanda hoje</p>';
+  }
+
+  // Top produtos
+  const prods = {};
+  pagas.forEach(c => (c.itens||[]).forEach(i => {
+    if (!prods[i.nome]) prods[i.nome] = { qtd:0, total:0 };
+    prods[i.nome].qtd   += i.qtd;
+    prods[i.nome].total += i.preco*i.qtd;
+  }));
+  const topEl = document.getElementById('relTopProd');
+  if (topEl) {
+    const top = Object.entries(prods).sort((a,b)=>b[1].total-a[1].total).slice(0,8);
+    const icons = ['🥇','🥈','🥉'];
+    topEl.innerHTML = top.map(([n,d],i) => `
+      <div class="flex items-center justify-between bg-slate-900/60 border border-white/5 rounded-xl px-3 py-2">
+        <span class="text-[10px] font-black text-slate-300">${icons[i]||`${i+1}.`} ${n}</span>
+        <div class="text-right">
+          <span class="text-[10px] font-black text-amber-400">${Utils.formatCurrency(d.total)}</span>
+          <span class="text-[8px] text-slate-600 ml-2">${d.qtd} un</span>
+        </div>
+      </div>`).join('') || '<p class="text-[9px] text-slate-600 text-center py-2 font-bold">Sem vendas pagas</p>';
+  }
+
+  UIService.openModal('modalRelatorio');
+}
+
+function _gerarTextoRelatorio() {
+  const hoje    = Utils.todayISO();
+  const todas   = Store.getComandas();
+  const abertas = todas.filter(c => c.status === 'aberta');
+  const pagas   = todas.filter(c => c.status === 'paga' && c.fechadoEm?.slice(0,10) === hoje);
+  const fatur   = pagas.reduce((s,c) => s + (c.total||calcTotalComanda(c)), 0);
+  const cfg     = Store.getConfig();
+  const nome    = cfg?.nome||'CH Geladas';
+  const sep     = '═'.repeat(42);
+  const sep2    = '─'.repeat(42);
+  let txt = `${sep}\n  ${nome} — RELATÓRIO DE COMANDAS\n  ${Utils.today()}\n${sep}\n\n`;
+  txt += `Total faturado:    ${Utils.formatCurrency(fatur)}\n`;
+  txt += `Comandas fechadas: ${pagas.length}\n`;
+  txt += `Comandas abertas:  ${abertas.length}\n\n`;
+  if (pagas.length > 0) {
+    txt += `${sep2}\nCOMANDAS FECHADAS HOJE\n${sep2}\n`;
+    pagas.forEach(c => {
+      txt += `\n  ${c.nome} — ${Utils.formatCurrency(c.total||calcTotalComanda(c))} (${c.formaPgto||'—'})\n`;
+      (c.itens||[]).forEach(i => txt += `    · ${i.nome} x${i.qtd}  ${Utils.formatCurrency(i.preco*i.qtd)}\n`);
+    });
+  }
+  if (abertas.length > 0) {
+    txt += `\n${sep2}\nCOMANDAS AINDA ABERTAS\n${sep2}\n`;
+    abertas.forEach(c => txt += `  ${c.nome} — ${Utils.formatCurrency(calcTotalComanda(c))} (${(c.itens||[]).reduce((s,i)=>s+i.qtd,0)} itens)\n`);
+  }
+  txt += `\n${sep}\nGerado por ${nome} PDV\n${sep}\n`;
+  return txt;
+}
+
+function copiarRelatorio() {
+  Utils.copyToClipboard(_gerarTextoRelatorio())
+    .then(() => UIService.showToast('Relatório copiado!', '', 'success'));
+}
+function baixarRelatorio() {
+  Utils.downloadBlob(_gerarTextoRelatorio(), 'text/plain;charset=utf-8;', `relatorio_comandas_${Utils.todayISO()}.txt`);
+  UIService.showToast('Relatório salvo!', '', 'success');
+}
+
+/* ════════════════════════════════
+   INIT CHECK
+════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', () => {
+  if (AuthService.isLogged()) {
+    document.getElementById('lock').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    init();
+  }
+});
+</script>
+</body>
+</html>

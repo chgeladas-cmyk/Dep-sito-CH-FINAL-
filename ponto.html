@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#04060d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CH Geladas">
+<title>Ponto — CH Geladas</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
+:root{--bg:#060810;--border:rgba(255,255,255,0.06);}
+*{box-sizing:border-box;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:#f1f5f9;min-height:100vh;user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+body{background-image:radial-gradient(ellipse at 50% 0%,rgba(16,185,129,.04) 0%,transparent 50%);}
+
+#lock{position:fixed;inset:0;z-index:9999;background:radial-gradient(ellipse at 50% 40%,#0f1a2e 0%,#060810 70%);display:flex;align-items:center;justify-content:center;}
+#lock.hidden{display:none;}
+
+.modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(0,0,0,.8);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s,visibility .2s;}
+.modal.open{opacity:1;visibility:visible;pointer-events:auto;}
+.modal.open>.modal-box{animation:mIn .22s cubic-bezier(.34,1.56,.64,1) forwards;}
+@keyframes mIn{from{opacity:0;transform:scale(.93) translateY(8px);}to{opacity:1;transform:scale(1) translateY(0);}}
+.modal-box{background:rgba(13,17,23,.98);border:1px solid rgba(255,255,255,.09);border-radius:2rem;width:100%;box-shadow:0 32px 64px rgba(0,0,0,.6);}
+
+.inp{font-size:16px!important;padding:12px 14px;color:#fff;background:#1e293b;border:2px solid #334155;border-radius:.75rem;width:100%;outline:none;transition:all .2s;font-family:inherit;}
+.inp:focus{border-color:#10b981!important;box-shadow:0 0 0 4px rgba(16,185,129,.2)!important;background:#0f172a;}
+.inp::placeholder{color:#64748b;}
+.label{color:#34d399;font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.35rem;display:block;}
+
+/* RELOGIO GRANDE */
+#relogioGrande{font-variant-numeric:tabular-nums;letter-spacing:.05em;}
+
+/* BOTOES DE PONTO */
+.btn-entrada{background:linear-gradient(135deg,rgba(16,185,129,.2),rgba(16,185,129,.08));border:2px solid rgba(16,185,129,.35);color:#34d399;border-radius:1.5rem;padding:1.5rem;font-weight:900;font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;transition:all .2s;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.5rem;}
+.btn-entrada:hover{background:rgba(16,185,129,.25);border-color:rgba(16,185,129,.6);transform:translateY(-2px);box-shadow:0 8px 24px rgba(16,185,129,.15);}
+.btn-entrada:active{transform:scale(.97);}
+.btn-saida{background:linear-gradient(135deg,rgba(239,68,68,.2),rgba(239,68,68,.08));border:2px solid rgba(239,68,68,.35);color:#f87171;border-radius:1.5rem;padding:1.5rem;font-weight:900;font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;transition:all .2s;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:.5rem;}
+.btn-saida:hover{background:rgba(239,68,68,.25);border-color:rgba(239,68,68,.6);transform:translateY(-2px);box-shadow:0 8px 24px rgba(239,68,68,.15);}
+.btn-saida:active{transform:scale(.97);}
+
+/* PONTO ROW */
+.ponto-row{background:rgba(13,17,23,.7);border:1px solid rgba(255,255,255,.05);border-radius:1rem;padding:.875rem;display:flex;align-items:center;gap:.875rem;transition:all .15s;}
+.ponto-row:hover{border-color:rgba(255,255,255,.1);}
+
+/* COLABORADOR CARD */
+.colab-card{background:rgba(13,17,23,.7);border:1px solid rgba(255,255,255,.06);border-radius:1.25rem;padding:1rem;transition:all .2s;}
+.colab-card:hover{border-color:rgba(16,185,129,.25);}
+
+.badge{display:inline-flex;align-items:center;border-radius:9999px;font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:.2rem .55rem;}
+.b-green{background:rgba(16,185,129,.15);color:#34d399;}
+.b-red{background:rgba(239,68,68,.15);color:#f87171;}
+.b-blue{background:rgba(59,130,246,.15);color:#60a5fa;}
+.b-amber{background:rgba(245,158,11,.15);color:#fbbf24;}
+.b-slate{background:rgba(100,116,139,.15);color:#94a3b8;}
+
+/* TABS */
+.tab-btn{padding:.5rem 1rem;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;border-radius:.75rem;color:#4b5563;transition:all .15s;cursor:pointer;white-space:nowrap;}
+.tab-btn.active{background:rgba(16,185,129,.12);color:#34d399;}
+
+.scroll::-webkit-scrollbar{width:3px;}
+.scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:10px;}
+.no-scroll{-ms-overflow-style:none;scrollbar-width:none;}
+.no-scroll::-webkit-scrollbar{display:none;}
+
+#toast{min-width:220px;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(4rem);opacity:0;pointer-events:none;z-index:200;transition:opacity .25s,transform .25s;background:rgba(13,17,23,.98);border:1px solid rgba(255,255,255,.09);border-radius:1.25rem;padding:1rem 1.25rem;display:flex;align-items:center;gap:.75rem;box-shadow:0 24px 48px rgba(0,0,0,.5);}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- LOCK -->
+<div id="lock">
+  <div style="background:rgba(13,17,23,.95);border:1px solid rgba(255,255,255,.08);border-radius:2.5rem;padding:2.5rem;width:100%;max-width:360px;margin:0 1rem;text-align:center;box-shadow:0 40px 80px rgba(0,0,0,.8);">
+    <div class="text-5xl mb-4">⏱️</div>
+    <h1 class="text-2xl font-black mb-1 uppercase tracking-tight">CH <span class="text-emerald-400">GELADAS</span></h1>
+    <p class="text-[9px] text-slate-600 font-bold uppercase tracking-widest mb-8">Módulo de Ponto</p>
+    <input type="password" id="pinInput" autocomplete="current-password" inputmode="numeric"
+      class="w-full bg-slate-950 border-2 border-slate-800 focus:border-emerald-500 p-5 rounded-2xl text-center text-2xl outline-none text-white tracking-[.4em] transition-all font-mono mb-4"
+      placeholder="· · · · ·" maxlength="8">
+    <div id="lockError" class="hidden text-[10px] text-red-400 font-bold mb-3"></div>
+    <button onclick="doLogin()" class="w-full bg-emerald-700 hover:bg-emerald-600 py-4 rounded-xl font-black uppercase text-xs tracking-widest transition-all">
+      <i class="fas fa-unlock-alt mr-2"></i>Entrar
+    </button>
+    <div class="mt-6"><a href="index.html" class="text-[9px] text-slate-700 hover:text-slate-500 font-bold uppercase tracking-widest transition-colors">← Hub Principal</a></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden flex flex-col min-h-screen">
+
+  <!-- HEADER -->
+  <header class="sticky top-0 z-40 px-4 py-3 flex justify-between items-center" style="background:rgba(6,8,16,.96);border-bottom:1px solid rgba(255,255,255,.04);">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">⏱️</span>
+      <div>
+        <h1 class="text-[10px] font-black uppercase tracking-widest text-emerald-400">Ponto</h1>
+        <p id="clock" class="text-[9px] font-mono text-slate-600 mt-0.5">00:00:00</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="abrirRelatorio()" class="w-8 h-8 rounded-lg bg-slate-900 border border-white/5 flex items-center justify-center text-slate-500 hover:text-emerald-400 transition-all" title="Relatório">
+        <i class="fas fa-chart-bar text-xs"></i>
+      </button>
+      <button onclick="logout()" class="w-8 h-8 rounded-lg bg-slate-900 border border-white/5 flex items-center justify-center text-slate-500 hover:text-red-400 transition-all">
+        <i class="fas fa-power-off text-xs"></i>
+      </button>
+    </div>
+  </header>
+
+  <main class="flex-1 p-3 pb-28 space-y-4 max-w-2xl mx-auto w-full">
+
+    <!-- RELÓGIO GRANDE -->
+    <div class="bg-slate-900/50 border border-white/5 rounded-3xl p-6 text-center">
+      <p id="dataHoje" class="text-[9px] text-slate-500 font-bold uppercase tracking-widest mb-2"></p>
+      <p id="relogioGrande" class="text-5xl font-black text-white tracking-tight mb-1">00:00:00</p>
+      <p id="statusTurno" class="text-[10px] text-slate-500 font-bold uppercase tracking-widest"></p>
+    </div>
+
+    <!-- REGISTAR PONTO -->
+    <div class="bg-slate-900/40 border border-white/5 rounded-3xl p-5">
+      <label class="label mb-3">Nome do Colaborador</label>
+      <input type="text" id="nomeColaborador" class="inp mb-4" placeholder="Digite o nome..." list="nomesSugestoes">
+      <datalist id="nomesSugestoes"></datalist>
+      <div class="grid grid-cols-2 gap-3">
+        <button onclick="registarPonto('ENTRADA')" class="btn-entrada">
+          <i class="fas fa-sign-in-alt text-2xl"></i>
+          <span>Entrada</span>
+        </button>
+        <button onclick="registarPonto('SAÍDA')" class="btn-saida">
+          <i class="fas fa-sign-out-alt text-2xl"></i>
+          <span>Saída</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- ABERTURA/FECHAMENTO DE CAIXA -->
+    <div class="bg-slate-900/50 border border-white/5 rounded-2xl p-4 mb-1">
+      <p class="text-[9px] text-amber-400 font-black uppercase tracking-widest mb-3 flex items-center gap-2">
+        <i class="fas fa-cash-register"></i> Caixa
+      </p>
+      <div id="caixaStatus" class="text-center mb-3">
+        <span id="caixaStatusBadge" class="badge b-slate">Caixa Fechado</span>
+        <p id="caixaAbertoEm" class="text-[8px] text-slate-600 font-bold mt-1 hidden"></p>
+      </div>
+      <div class="grid grid-cols-2 gap-2 mb-2">
+        <div>
+          <label class="label !text-amber-400">Troco Inicial (R$)</label>
+          <input type="number" id="caixaTrocoInicial" class="inp !py-2" placeholder="0,00" step="0.01" min="0">
+        </div>
+        <div>
+          <label class="label !text-amber-400">Obs.</label>
+          <input type="text" id="caixaObs" class="inp !py-2" placeholder="Opcional">
+        </div>
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="abrirCaixa()" id="btnAbrirCaixa" class="py-3 rounded-xl bg-emerald-600/20 border border-emerald-500/25 text-emerald-300 font-black text-[9px] uppercase flex items-center justify-center gap-2 active:scale-95 transition-all hover:bg-emerald-600/35">
+          <i class="fas fa-lock-open"></i>Abrir Caixa
+        </button>
+        <button onclick="fecharCaixa()" id="btnFecharCaixa" disabled class="py-3 rounded-xl bg-red-600/20 border border-red-500/25 text-red-300 font-black text-[9px] uppercase flex items-center justify-center gap-2 active:scale-95 transition-all disabled:opacity-30">
+          <i class="fas fa-lock"></i>Fechar Caixa
+        </button>
+      </div>
+      <div id="caixaResumo" class="hidden mt-3 bg-slate-800/50 rounded-xl p-3">
+        <p class="text-[8px] text-slate-500 font-black uppercase mb-2">Resumo do Caixa</p>
+        <div class="space-y-1">
+          <div class="flex justify-between text-[9px] font-bold"><span class="text-slate-400">Troco inicial</span><span id="resumoTroco" class="text-white">R$ 0,00</span></div>
+          <div class="flex justify-between text-[9px] font-bold"><span class="text-slate-400">Vendas em dinheiro</span><span id="resumoDinheiro" class="text-emerald-400">R$ 0,00</span></div>
+          <div class="flex justify-between text-[9px] font-bold"><span class="text-slate-400">Total no caixa</span><span id="resumoTotal" class="text-white font-black">R$ 0,00</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- KPIs DO DIA -->
+    <div class="grid grid-cols-3 gap-2">
+      <div class="bg-slate-900/50 border border-white/5 rounded-2xl p-3 text-center">
+        <p class="text-[8px] text-slate-500 font-black uppercase tracking-wider mb-1">Registos Hoje</p>
+        <p id="kpiRegistos" class="text-xl font-black text-white">0</p>
+      </div>
+      <div class="bg-emerald-500/8 border border-emerald-500/15 rounded-2xl p-3 text-center">
+        <p class="text-[8px] text-emerald-400 font-black uppercase tracking-wider mb-1">Entradas</p>
+        <p id="kpiEntradas" class="text-xl font-black text-emerald-400">0</p>
+      </div>
+      <div class="bg-red-500/8 border border-red-500/15 rounded-2xl p-3 text-center">
+        <p class="text-[8px] text-red-400 font-black uppercase tracking-wider mb-1">Saídas</p>
+        <p id="kpiSaidas" class="text-xl font-black text-red-400">0</p>
+      </div>
+    </div>
+
+    <!-- TABS -->
+    <div class="flex gap-2 overflow-x-auto no-scroll">
+      <button class="tab-btn active" onclick="setTab('hoje', this)">Hoje</button>
+      <button class="tab-btn" onclick="setTab('semana', this)">Semana</button>
+      <button class="tab-btn" onclick="setTab('mes', this)">Mês</button>
+      <button class="tab-btn" onclick="setTab('colaboradores', this)">Por Colaborador</button>
+    </div>
+
+    <!-- LISTA DE PONTOS -->
+    <div id="listaPonto" class="space-y-2"></div>
+
+  </main>
+</div>
+
+<!-- ══════ MODAL RELATÓRIO ══════ -->
+<div id="modalRelatorio" class="modal">
+  <div class="modal-box max-w-sm p-0 overflow-hidden">
+    <div class="p-5 border-b border-white/5 flex items-center justify-between">
+      <div>
+        <h3 class="text-sm font-black text-emerald-400 flex items-center gap-2"><i class="fas fa-clock"></i> Relatório de Ponto</h3>
+        <p id="relPeriodoLabel" class="text-[9px] text-slate-500 font-bold mt-0.5"></p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="copiarRelatorio()" class="w-8 h-8 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 flex items-center justify-center"><i class="fas fa-copy text-sm"></i></button>
+        <button onclick="baixarRelatorio()" class="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 flex items-center justify-center"><i class="fas fa-download text-sm"></i></button>
+        <button onclick="UIService.closeModal('modalRelatorio')" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
+      </div>
+    </div>
+    <div class="overflow-y-auto scroll" style="max-height:76vh;">
+      <div class="p-5 border-b border-white/5 space-y-2">
+        <p class="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3">Resumo</p>
+        <div id="relResumo" class="bg-slate-900/60 border border-white/5 rounded-2xl divide-y divide-white/5 overflow-hidden"></div>
+      </div>
+      <!-- CAIXAS -->
+      <div class="p-5 border-b border-white/5">
+        <p class="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3">💰 Abertura / Fechamento de Caixa</p>
+        <div id="relCaixas" class="space-y-2"></div>
+      </div>
+      <div class="p-5">
+        <p class="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3">Por Colaborador</p>
+        <div id="relColabs" class="space-y-2 max-h-72 overflow-y-auto scroll"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast">
+  <div id="toastIcon" class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-black"></div>
+  <div><span id="toastMsg" class="text-[11px] font-black uppercase tracking-wide block"></span><span id="toastSub" class="text-[9px] text-slate-500 font-bold"></span></div>
+</div>
+
+<script src="core.js"></script>
+  <script src="./services/syncService.js"></script>
+  <script src="./services/auditService.js"></script>
+  <script src="./services/syncMonitor.js"></script>
+  <script src="./services/backupService.js"></script>
+
+<script>
+'use strict';
+
+/* ════════════════════════════════
+   LOGIN
+════════════════════════════════ */
+async function doLogin() {
+  const pin = document.getElementById('pinInput').value.trim();
+  const ok  = await AuthService.login(pin);
+  if (ok) {
+    document.getElementById('lock').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    init();
+  } else {
+    const err = document.getElementById('lockError');
+    err.textContent = 'PIN incorreto.';
+    err.classList.remove('hidden');
+    document.getElementById('pinInput').value = '';
+  }
+}
+document.getElementById('pinInput').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+function logout() { if (!confirm('Encerrar sessão?')) return; AuthService.logout(); location.reload(); }
+
+/* ════════════════════════════════
+   ESTADO
+════════════════════════════════ */
+let _tabAtual = 'hoje';
+
+/* ════════════════════════════════
+   INIT
+════════════════════════════════ */
+function init() {
+  UIService.startClock('clock');
+  iniciarCaixa();
+  _iniciarRelogioGrande();
+  _atualizarData();
+  preencherSugestoes();
+  atualizarKpis();
+  renderLista();
+  EventBus.on('store:updated', () => { atualizarKpis(); renderLista(); preencherSugestoes(); });
+}
+
+function _iniciarRelogioGrande() {
+  const tick = () => {
+    const el = document.getElementById('relogioGrande');
+    if (el) el.textContent = new Date().toLocaleTimeString('pt-BR');
+  };
+  tick();
+  setInterval(tick, 1000);
+}
+
+function _atualizarData() {
+  const el = document.getElementById('dataHoje');
+  if (el) el.textContent = new Date().toLocaleDateString('pt-BR', { weekday:'long', day:'2-digit', month:'long', year:'numeric' });
+
+  // Status do turno
+  const status  = document.getElementById('statusTurno');
+  const pontos  = Store.getPonto();
+  const hoje    = Utils.todayISO();
+  const pontosHoje = pontos.filter(p => p.dataCurta === hoje);
+  const ultimo  = pontosHoje[0];
+  if (!status) return;
+  if (!ultimo)              status.textContent = 'Sem registo hoje';
+  else if (ultimo.tipo === 'ENTRADA') status.textContent = `Turno em curso desde ${ultimo.hora}`;
+  else                      status.textContent = `Saída registada às ${ultimo.hora}`;
+}
+
+/* ════════════════════════════════
+   SUGESTÕES DE NOMES
+════════════════════════════════ */
+function preencherSugestoes() {
+  const nomes = [...new Set(Store.getPonto().map(p => p.nome).filter(Boolean))];
+  const dl    = document.getElementById('nomesSugestoes');
+  if (dl) dl.innerHTML = nomes.map(n => `<option value="${n}">`).join('');
+}
+
+/* ════════════════════════════════
+   REGISTAR PONTO
+════════════════════════════════ */
+function registarPonto(tipo) {
+  const nome = (document.getElementById('nomeColaborador')?.value||'').trim();
+  if (!nome) { UIService.showToast('Nome obrigatório', 'Informe o colaborador', 'error'); document.getElementById('nomeColaborador')?.focus(); return; }
+
+  const agora = new Date();
+  const registo = {
+    id:        Utils.generateId(),
+    nome,
+    tipo,
+    hora:      agora.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' }),
+    horaFull:  agora.toLocaleTimeString('pt-BR'),
+    data:      Utils.today(),
+    dataCurta: Utils.todayISO(),
+    criadoEm:  agora.toISOString(),
+  };
+
+  Store.mutatePonto(ponto => { ponto.unshift(registo); });
+
+  const emoji = tipo === 'ENTRADA' ? '✅' : '🔴';
+  UIService.showToast(`${emoji} ${tipo} registada!`, `${nome} — ${registo.hora}`, tipo === 'ENTRADA' ? 'success' : 'warning');
+  document.getElementById('nomeColaborador').value = '';
+  _atualizarData();
+  atualizarKpis();
+  renderLista();
+}
+
+/* ════════════════════════════════
+   KPIs
+════════════════════════════════ */
+function atualizarKpis() {
+  const hoje     = Utils.todayISO();
+  const pontosH  = Store.getPonto().filter(p => p.dataCurta === hoje);
+  const entradas = pontosH.filter(p => p.tipo === 'ENTRADA').length;
+  const saidas   = pontosH.filter(p => p.tipo === 'SAÍDA').length;
+  _set('kpiRegistos', pontosH.length);
+  _set('kpiEntradas', entradas);
+  _set('kpiSaidas',   saidas);
+}
+
+/* ════════════════════════════════
+   TABS
+════════════════════════════════ */
+function setTab(tab, btn) {
+  _tabAtual = tab;
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderLista();
+}
+
+/* ════════════════════════════════
+   RENDER LISTA / POR COLABORADOR
+════════════════════════════════ */
+function renderLista() {
+  if (_tabAtual === 'colaboradores') { renderPorColaborador(); return; }
+
+  const hoje   = Utils.todayISO();
+  const agora  = new Date();
+  let pontos   = Store.getPonto();
+
+  if (_tabAtual === 'hoje') {
+    pontos = pontos.filter(p => p.dataCurta === hoje);
+  } else if (_tabAtual === 'semana') {
+    const ini = new Date(agora); ini.setDate(ini.getDate() - 6); ini.setHours(0,0,0,0);
+    pontos = pontos.filter(p => new Date(p.criadoEm||p.dataCurta) >= ini);
+  } else if (_tabAtual === 'mes') {
+    const ini = new Date(agora.getFullYear(), agora.getMonth(), 1);
+    pontos = pontos.filter(p => new Date(p.criadoEm||p.dataCurta) >= ini);
+  }
+
+  const el = document.getElementById('listaPonto');
+  if (!el) return;
+
+  if (pontos.length === 0) {
+    el.innerHTML = `<div class="flex flex-col items-center justify-center py-16 opacity-30">
+      <i class="fas fa-clock text-5xl text-slate-600 mb-4"></i>
+      <p class="text-[10px] font-black uppercase tracking-widest text-slate-600">Nenhum registo</p>
+    </div>`;
+    return;
+  }
+
+  // Agrupa por data
+  const grupos = {};
+  pontos.forEach(p => {
+    const key = p.dataCurta || p.data || '?';
+    if (!grupos[key]) grupos[key] = [];
+    grupos[key].push(p);
+  });
+
+  el.innerHTML = Object.entries(grupos)
+    .sort((a,b) => b[0].localeCompare(a[0]))
+    .map(([data, regs]) => {
+      const dataFmt = data === hoje
+        ? 'Hoje'
+        : new Date(data + 'T12:00').toLocaleDateString('pt-BR', { weekday:'short', day:'2-digit', month:'short' });
+
+      const linhas = regs.map(p => {
+        const entrada = p.tipo === 'ENTRADA';
+        return `<div class="ponto-row">
+          <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${entrada ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'}">
+            <i class="fas ${entrada ? 'fa-sign-in-alt' : 'fa-sign-out-alt'} text-sm"></i>
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="text-[11px] font-black text-white truncate">${p.nome}</p>
+            <p class="text-[8px] text-slate-500 font-bold">${p.horaFull||p.hora||'—'}</p>
+          </div>
+          <span class="badge ${entrada ? 'b-green' : 'b-red'} flex-shrink-0">${p.tipo}</span>
+          ${AuthService.isAdmin() ? `<button onclick="apagarPonto('${p.id}')" class="w-7 h-7 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center justify-center transition-all ml-1" title="Apagar"><i class="fas fa-times text-[9px]"></i></button>` : ''}
+        </div>`;
+      }).join('');
+
+      return `<div>
+        <p class="text-[8px] text-slate-600 font-black uppercase tracking-widest mb-2 px-1">${dataFmt} <span class="text-slate-700">(${regs.length})</span></p>
+        <div class="space-y-1.5">${linhas}</div>
+      </div>`;
+    }).join('');
+}
+
+/* ════════════════════════════════
+   POR COLABORADOR
+════════════════════════════════ */
+function renderPorColaborador() {
+  const pontos = Store.getPonto();
+  const hoje   = Utils.todayISO();
+  const el     = document.getElementById('listaPonto');
+  if (!el) return;
+
+  // Agrupa por nome
+  const colabs = {};
+  pontos.forEach(p => {
+    if (!colabs[p.nome]) colabs[p.nome] = { entradas: 0, saidas: 0, horasTotais: 0, ultimoHoje: null };
+    if (p.tipo === 'ENTRADA') colabs[p.nome].entradas++;
+    else colabs[p.nome].saidas++;
+    if (p.dataCurta === hoje) colabs[p.nome].ultimoHoje = p;
+  });
+
+  // Calcula horas por pares entrada/saída por colaborador
+  Object.keys(colabs).forEach(nome => {
+    const registos = pontos.filter(p => p.nome === nome).sort((a,b) => (a.criadoEm||'').localeCompare(b.criadoEm||''));
+    let totalMin = 0;
+    for (let i = 0; i < registos.length - 1; i++) {
+      if (registos[i].tipo === 'ENTRADA' && registos[i+1].tipo === 'SAÍDA') {
+        const ini = new Date(registos[i].criadoEm||registos[i].dataCurta);
+        const fim = new Date(registos[i+1].criadoEm||registos[i+1].dataCurta);
+        totalMin += (fim - ini) / 60000;
+        i++;
+      }
+    }
+    colabs[nome].horasTotais = totalMin;
+  });
+
+  if (Object.keys(colabs).length === 0) {
+    el.innerHTML = `<div class="flex flex-col items-center justify-center py-16 opacity-30">
+      <i class="fas fa-users text-5xl text-slate-600 mb-4"></i>
+      <p class="text-[10px] font-black uppercase tracking-widest text-slate-600">Nenhum colaborador</p>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = Object.entries(colabs)
+    .sort((a,b) => a[0].localeCompare(b[0]))
+    .map(([nome, d]) => {
+      const ativo     = d.ultimoHoje?.tipo === 'ENTRADA';
+      const horas     = Math.floor(d.horasTotais / 60);
+      const min       = Math.round(d.horasTotais % 60);
+      const horasStr  = d.horasTotais > 0 ? `${horas}h${String(min).padStart(2,'0')}min` : '—';
+
+      return `<div class="colab-card">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <div class="w-9 h-9 rounded-xl bg-slate-800 flex items-center justify-center font-black text-sm text-slate-300">${nome.charAt(0).toUpperCase()}</div>
+            <div>
+              <p class="text-[12px] font-black text-white">${nome}</p>
+              ${d.ultimoHoje ? `<p class="text-[8px] text-slate-500 font-bold">Último registo hoje: ${d.ultimoHoje.hora}</p>` : '<p class="text-[8px] text-slate-600 font-bold">Sem registo hoje</p>'}
+            </div>
+          </div>
+          ${d.ultimoHoje ? `<span class="badge ${ativo ? 'b-green' : 'b-slate'}">${ativo ? '● Ativo' : '○ Saiu'}</span>` : ''}
+        </div>
+        <div class="grid grid-cols-3 gap-2 mt-3">
+          <div class="bg-slate-900/60 rounded-xl p-2 text-center">
+            <p class="text-[7px] text-emerald-400 font-black uppercase mb-0.5">Entradas</p>
+            <p class="text-sm font-black text-emerald-400">${d.entradas}</p>
+          </div>
+          <div class="bg-slate-900/60 rounded-xl p-2 text-center">
+            <p class="text-[7px] text-red-400 font-black uppercase mb-0.5">Saídas</p>
+            <p class="text-sm font-black text-red-400">${d.saidas}</p>
+          </div>
+          <div class="bg-slate-900/60 rounded-xl p-2 text-center">
+            <p class="text-[7px] text-blue-400 font-black uppercase mb-0.5">Horas</p>
+            <p class="text-sm font-black text-blue-400">${horasStr}</p>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+}
+
+/* ════════════════════════════════
+   RELATÓRIO
+════════════════════════════════ */
+function abrirRelatorio() {
+  const pontos  = Store.getPonto();
+  const hoje    = Utils.todayISO();
+  const agora   = new Date();
+
+  // Filtra pelo tab atual
+  let filtrados = pontos;
+  let label     = 'Todo o período';
+  if (_tabAtual === 'hoje') {
+    filtrados = pontos.filter(p => p.dataCurta === hoje);
+    label     = 'Hoje — ' + Utils.today();
+  } else if (_tabAtual === 'semana') {
+    const ini = new Date(agora); ini.setDate(ini.getDate()-6); ini.setHours(0,0,0,0);
+    filtrados = pontos.filter(p => new Date(p.criadoEm||p.dataCurta) >= ini);
+    label     = 'Últimos 7 dias';
+  } else if (_tabAtual === 'mes') {
+    const ini = new Date(agora.getFullYear(), agora.getMonth(), 1);
+    filtrados = pontos.filter(p => new Date(p.criadoEm||p.dataCurta) >= ini);
+    label     = 'Este mês';
+  }
+
+  _set('relPeriodoLabel', label);
+
+  const entradas  = filtrados.filter(p => p.tipo === 'ENTRADA').length;
+  const saidas    = filtrados.filter(p => p.tipo === 'SAÍDA').length;
+  const colabSet  = new Set(filtrados.map(p => p.nome));
+
+  const linhas = [
+    ['Período',        label],
+    ['Total Registos', filtrados.length],
+    ['Entradas',       entradas],
+    ['Saídas',         saidas],
+    ['Colaboradores',  colabSet.size],
+  ];
+  document.getElementById('relResumo').innerHTML = linhas.map(([k,v]) =>
+    `<div class="flex justify-between items-center px-4 py-2.5">
+      <span class="text-[10px] text-slate-400 font-bold">${k}</span>
+      <span class="text-[10px] font-black text-white">${v}</span>
+    </div>`).join('');
+
+  // Por colaborador
+  const colabs = {};
+  filtrados.forEach(p => {
+    if (!colabs[p.nome]) colabs[p.nome] = { entradas:0, saidas:0 };
+    if (p.tipo==='ENTRADA') colabs[p.nome].entradas++;
+    else colabs[p.nome].saidas++;
+  });
+  document.getElementById('relColabs').innerHTML = Object.entries(colabs)
+    .sort((a,b)=>(a[0]||'').localeCompare(b[0]||''))
+    .map(([nome, d]) => `
+      <div class="flex items-center justify-between bg-slate-900/60 border border-white/5 rounded-xl px-3 py-2.5">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center font-black text-xs text-slate-400">${(nome||'?').charAt(0).toUpperCase()}</div>
+          <span class="text-[10px] font-black text-white">${nome}</span>
+        </div>
+        <div class="flex gap-3 text-right">
+          <div><p class="text-[8px] text-emerald-400 font-black">${d.entradas}</p><p class="text-[7px] text-slate-600">entradas</p></div>
+          <div><p class="text-[8px] text-red-400 font-black">${d.saidas}</p><p class="text-[7px] text-slate-600">saídas</p></div>
+        </div>
+      </div>`).join('') || '<p class="text-[9px] text-slate-600 text-center py-4 font-bold">Nenhum dado</p>';
+
+  // Caixas (abertura/fechamento)
+  const caixas = Store.getPonto().filter(p => p.tipo === 'CAIXA_FECHAMENTO');
+  const caixaFiltrados = _tabAtual === 'hoje'
+    ? caixas.filter(p => (p.criadoEm||'').startsWith(hoje))
+    : _tabAtual === 'semana'
+    ? caixas.filter(p => new Date(p.criadoEm||'') >= new Date(agora.getTime() - 6*86400000))
+    : _tabAtual === 'mes'
+    ? caixas.filter(p => new Date(p.criadoEm||'') >= new Date(agora.getFullYear(), agora.getMonth(), 1))
+    : caixas;
+
+  document.getElementById('relCaixas').innerHTML = caixaFiltrados.length === 0
+    ? '<p class="text-[9px] text-slate-600 text-center py-3 font-bold">Nenhum fechamento no período</p>'
+    : caixaFiltrados.map(c => {
+        const d = c.dados || {};
+        const aber = d.abertoEm  ? new Date(d.abertoEm).toLocaleString('pt-BR') : '—';
+        const fech = d.fechadoEm ? new Date(d.fechadoEm).toLocaleString('pt-BR') : '—';
+        return `<div class="bg-slate-900/60 border border-white/5 rounded-xl p-3 space-y-1.5">
+          <div class="flex items-center justify-between">
+            <span class="text-[10px] font-black text-emerald-400">💰 ${d.operador||c.nome||'—'}</span>
+            <span class="badge b-green text-[7px]">Fechado</span>
+          </div>
+          <div class="grid grid-cols-2 gap-1">
+            <div><p class="text-[7px] text-slate-600 font-bold uppercase">Abertura</p><p class="text-[9px] text-slate-300 font-black">${aber}</p></div>
+            <div><p class="text-[7px] text-slate-600 font-bold uppercase">Fechamento</p><p class="text-[9px] text-slate-300 font-black">${fech}</p></div>
+            <div><p class="text-[7px] text-slate-600 font-bold uppercase">Troco Inicial</p><p class="text-[9px] text-blue-400 font-black">${Utils.formatCurrency(d.trocoInicial||0)}</p></div>
+            <div><p class="text-[7px] text-slate-600 font-bold uppercase">Dinheiro Vendas</p><p class="text-[9px] text-blue-400 font-black">${Utils.formatCurrency(d.dinheiro||0)}</p></div>
+            <div class="col-span-2 bg-emerald-500/5 border border-emerald-500/15 rounded-lg px-2 py-1 flex justify-between">
+              <span class="text-[9px] text-emerald-400 font-black uppercase">Total no Caixa</span>
+              <span class="text-[10px] text-emerald-400 font-black">${Utils.formatCurrency(d.totalCaixa||0)}</span>
+            </div>
+            <div><p class="text-[7px] text-slate-600 font-bold uppercase">Nº Vendas</p><p class="text-[9px] text-slate-300 font-black">${d.qtdVendas||0}</p></div>
+          </div>
+        </div>`;
+      }).join('');
+
+  UIService.openModal('modalRelatorio');
+}
+
+function _gerarTextoRelatorio() {
+  const pontos  = Store.getPonto();
+  const hoje    = Utils.todayISO();
+  const agora   = new Date();
+  let filtrados = pontos;
+  let label     = 'Todo o período';
+  if (_tabAtual === 'hoje') { filtrados = pontos.filter(p=>p.dataCurta===hoje); label='Hoje — '+Utils.today(); }
+  else if (_tabAtual === 'semana') {
+    const ini=new Date(agora); ini.setDate(ini.getDate()-6); ini.setHours(0,0,0,0);
+    filtrados=pontos.filter(p=>new Date(p.criadoEm||p.dataCurta)>=ini); label='Últimos 7 dias';
+  } else if (_tabAtual === 'mes') {
+    const ini=new Date(agora.getFullYear(),agora.getMonth(),1);
+    filtrados=pontos.filter(p=>new Date(p.criadoEm||p.dataCurta)>=ini); label='Este mês';
+  }
+  const cfg  = Store.getConfig();
+  const nome = cfg?.nome||'CH Geladas';
+  const sep  = '═'.repeat(42);
+  const sep2 = '─'.repeat(42);
+  let txt = `${sep}\n  ${nome} — RELATÓRIO DE PONTO\n  ${label}\n  Gerado: ${Utils.nowFull()}\n${sep}\n\n`;
+  txt += `Total registos: ${filtrados.length}\n`;
+  txt += `Entradas:       ${filtrados.filter(p=>p.tipo==='ENTRADA').length}\n`;
+  txt += `Saídas:         ${filtrados.filter(p=>p.tipo==='SAÍDA').length}\n\n`;
+
+  // Por data
+  const grupos = {};
+  filtrados.forEach(p => { const k=p.dataCurta||p.data||'?'; if(!grupos[k]) grupos[k]=[]; grupos[k].push(p); });
+  Object.entries(grupos).sort((a,b)=>b[0].localeCompare(a[0])).forEach(([data,regs]) => {
+    txt += `${sep2}\n${data}\n${sep2}\n`;
+    regs.forEach(p => txt += `  ${p.tipo.padEnd(8)} ${p.nome.padEnd(20)} ${p.hora||''}\n`);
+    txt += '\n';
+  });
+  // Caixas
+  const caixas = Store.getPonto().filter(p => p.tipo === 'CAIXA_FECHAMENTO');
+  if (caixas.length) {
+    txt += `\nABERTURA / FECHAMENTO DE CAIXA\n${sep2}\n`;
+    caixas.slice(0,20).forEach(c => {
+      const d = c.dados||{};
+      txt += `  Operador:   ${d.operador||c.nome||'—'}\n`;
+      txt += `  Abertura:   ${d.abertoEm ? new Date(d.abertoEm).toLocaleString('pt-BR') : '—'}\n`;
+      txt += `  Fechamento: ${d.fechadoEm ? new Date(d.fechadoEm).toLocaleString('pt-BR') : '—'}\n`;
+      txt += `  Troco ini:  ${Utils.formatCurrency(d.trocoInicial||0)}\n`;
+      txt += `  Dinheiro:   ${Utils.formatCurrency(d.dinheiro||0)}\n`;
+      txt += `  Total cx:   ${Utils.formatCurrency(d.totalCaixa||0)}\n`;
+      txt += `  Nº vendas:  ${d.qtdVendas||0}\n\n`;
+    });
+  }
+  txt += `${sep}\nGerado por ${nome} PDV\n${sep}\n`;
+  return txt;
+}
+
+function copiarRelatorio() {
+  Utils.copyToClipboard(_gerarTextoRelatorio())
+    .then(() => UIService.showToast('Relatório copiado!','','success'));
+}
+function baixarRelatorio() {
+  Utils.downloadBlob(_gerarTextoRelatorio(),'text/plain;charset=utf-8;',`relatorio_ponto_${Utils.todayISO()}.txt`);
+  UIService.showToast('Relatório salvo!','','success');
+}
+
+/* ════════════════════════════════
+   UTIL
+════════════════════════════════ */
+function _set(id, val) { const el=document.getElementById(id); if(el) el.textContent=val; }
+
+/* ════════════════════════════════
+   INIT CHECK
+════════════════════════════════ */
+/* ═══════════ ADM — APAGAR PONTO ═══════════ */
+function apagarPonto(id) {
+  if (!AuthService.isAdmin()) return;
+  if (!confirm('Apagar este registro de ponto?')) return;
+  Store.mutatePonto(ponto => {
+    const idx = ponto.findIndex(p=>p.id===id);
+    if (idx>=0) ponto.splice(idx,1);
+  });
+  UIService.showToast('Registro apagado','','warning');
+  renderLista();
+}
+
+/* ═══════════ CAIXA ═══════════ */
+let _caixaAberto = false;
+let _caixaAtual  = null;
+
+function iniciarCaixa() {
+  // Verificar se há caixa aberto no localStorage
+  try {
+    const raw = localStorage.getItem('CH_CAIXA_ATUAL');
+    if (raw) {
+      _caixaAtual  = JSON.parse(raw);
+      _caixaAberto = true;
+    }
+  } catch(_) {}
+  atualizarUICaixa();
+}
+
+function abrirCaixa() {
+  if (_caixaAberto) { UIService.showToast('Caixa já aberto','Feche antes de abrir novamente','warning'); return; }
+  const troco = parseFloat(document.getElementById('caixaTrocoInicial')?.value)||0;
+  const obs   = document.getElementById('caixaObs')?.value.trim()||'';
+  _caixaAtual = {
+    id:        Utils.generateId(),
+    abertoEm:  new Date().toISOString(),
+    trocoInicial: troco,
+    obs,
+    operador:  AuthService.getNome(),
+  };
+  _caixaAberto = true;
+  try { localStorage.setItem('CH_CAIXA_ATUAL', JSON.stringify(_caixaAtual)); } catch(_) {}
+  atualizarUICaixa();
+  UIService.showToast('Caixa aberto!', `Troco inicial: ${Utils.formatCurrency(troco)}`, 'success');
+}
+
+function fecharCaixa() {
+  if (!_caixaAberto || !_caixaAtual) { UIService.showToast('Nenhum caixa aberto','','warning'); return; }
+  if (!confirm('Fechar o caixa agora?')) return;
+
+  const trocoInicial = _caixaAtual.trocoInicial||0;
+  const hoje         = Utils.todayISO();
+  const vendas       = Store.getVendas().filter(v => v.dataCurta === hoje);
+  const dinheiro     = vendas
+    .filter(v => (v.formaPgto||'').toLowerCase().includes('dinheiro'))
+    .reduce((s,v) => s+v.total, 0);
+  const totalCaixa   = trocoInicial + dinheiro;
+
+  const registro = {
+    ..._caixaAtual,
+    fechadoEm:   new Date().toISOString(),
+    trocoInicial,
+    dinheiro,
+    totalCaixa,
+    qtdVendas:   vendas.length,
+  };
+
+  // Salva no ponto como registro especial
+  Store.mutatePonto(ponto => {
+    ponto.unshift({
+      id:        Utils.generateId(),
+      tipo:      'CAIXA_FECHAMENTO',
+      nome:      registro.operador,
+      criadoEm:  registro.fechadoEm,
+      dados:     registro,
+    });
+  });
+
+  // Notificação Telegram
+  TelegramService.enviar(
+    `💰 <b>Fechamento de Caixa — CH Geladas</b>
+` +
+    `━━━━━━━━━━━━━━━━━━
+` +
+    `👤 <b>Operador:</b> ${registro.operador}
+` +
+    `🕐 <b>Abertura:</b> ${new Date(registro.abertoEm).toLocaleString('pt-BR')}
+` +
+    `🕐 <b>Fechamento:</b> ${new Date(registro.fechadoEm).toLocaleString('pt-BR')}
+` +
+    `━━━━━━━━━━━━━━━━━━
+` +
+    `💵 <b>Troco inicial:</b> ${Utils.formatCurrency(trocoInicial)}
+` +
+    `🛒 <b>Dinheiro vendas:</b> ${Utils.formatCurrency(dinheiro)}
+` +
+    `💰 <b>Total no caixa:</b> ${Utils.formatCurrency(totalCaixa)}
+` +
+    `📦 <b>Nº vendas:</b> ${vendas.length}`
+  );
+
+  // Limpa caixa
+  try { localStorage.removeItem('CH_CAIXA_ATUAL'); } catch(_) {}
+  _caixaAberto = false;
+  _caixaAtual  = null;
+  atualizarUICaixa();
+  UIService.showToast('Caixa fechado!', `Total: ${Utils.formatCurrency(totalCaixa)}`, 'success');
+}
+
+function atualizarUICaixa() {
+  const btnAbrir  = document.getElementById('btnAbrirCaixa');
+  const btnFechar = document.getElementById('btnFecharCaixa');
+  const badge     = document.getElementById('caixaStatusBadge');
+  const abertoEm  = document.getElementById('caixaAbertoEm');
+  const resumo    = document.getElementById('caixaResumo');
+
+  if (_caixaAberto && _caixaAtual) {
+    if (badge)    { badge.textContent='Caixa Aberto'; badge.className='badge b-green'; }
+    if (abertoEm) { abertoEm.textContent='Aberto: '+new Date(_caixaAtual.abertoEm).toLocaleTimeString('pt-BR'); abertoEm.classList.remove('hidden'); }
+    if (btnAbrir)  btnAbrir.disabled  = true;
+    if (btnFechar) btnFechar.disabled = false;
+    // Resumo
+    const hoje     = Utils.todayISO();
+    const vendas   = Store.getVendas().filter(v=>v.dataCurta===hoje);
+    const dinheiro = vendas.filter(v=>(v.formaPgto||'').toLowerCase().includes('dinheiro')).reduce((s,v)=>s+v.total,0);
+    const total    = (_caixaAtual.trocoInicial||0) + dinheiro;
+    if (resumo) resumo.classList.remove('hidden');
+    _set('resumoTroco',    Utils.formatCurrency(_caixaAtual.trocoInicial||0));
+    _set('resumoDinheiro', Utils.formatCurrency(dinheiro));
+    _set('resumoTotal',    Utils.formatCurrency(total));
+  } else {
+    if (badge)    { badge.textContent='Caixa Fechado'; badge.className='badge b-slate'; }
+    if (abertoEm)  abertoEm.classList.add('hidden');
+    if (btnAbrir)  btnAbrir.disabled  = false;
+    if (btnFechar) btnFechar.disabled = true;
+    if (resumo)    resumo.classList.add('hidden');
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (AuthService.isLogged()) {
+    document.getElementById('lock').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    init();
+  }
+});
+</script>
+</body>
+</html>

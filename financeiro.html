@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#04060d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CH Geladas">
+<title>Financeiro — CH Geladas</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
+:root{--bg:#060810;--surface:#0d1117;--border:rgba(255,255,255,0.06);}
+*{box-sizing:border-box;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:#f1f5f9;min-height:100vh;user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+body{background-image:radial-gradient(ellipse at 60% 10%,rgba(139,92,246,.04) 0%,transparent 55%);}
+
+#lock{position:fixed;inset:0;z-index:9999;background:radial-gradient(ellipse at 50% 40%,#0f1a2e 0%,#060810 70%);display:flex;align-items:center;justify-content:center;}
+#lock.hidden{display:none;}
+
+.modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(0,0,0,.8);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s,visibility .2s;}
+.modal.open{opacity:1;visibility:visible;pointer-events:auto;}
+.modal.open>.modal-box{animation:mIn .22s cubic-bezier(.34,1.56,.64,1) forwards;}
+@keyframes mIn{from{opacity:0;transform:scale(.93) translateY(8px);}to{opacity:1;transform:scale(1) translateY(0);}}
+.modal-box{background:rgba(13,17,23,.98);border:1px solid rgba(255,255,255,.09);border-radius:2rem;width:100%;box-shadow:0 32px 64px rgba(0,0,0,.6);}
+
+.inp{font-size:16px!important;padding:12px 14px;color:#fff;background:#1e293b;border:2px solid #334155;border-radius:.75rem;width:100%;outline:none;transition:all .2s;font-family:inherit;}
+.inp:focus{border-color:#8b5cf6!important;box-shadow:0 0 0 4px rgba(139,92,246,.2)!important;background:#0f172a;}
+.inp::placeholder{color:#64748b;}
+select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2364748b' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;}
+.label{color:#a78bfa;font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.35rem;display:block;}
+
+/* PERÍODO TABS */
+.per-btn{padding:.5rem 1rem;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.06em;border-radius:.75rem;color:#4b5563;transition:all .15s;cursor:pointer;white-space:nowrap;border:1px solid transparent;}
+.per-btn.active{background:rgba(139,92,246,.15);border-color:rgba(139,92,246,.3);color:#a78bfa;}
+
+/* STAT CARD */
+.stat{background:rgba(13,17,23,.85);border:1px solid var(--border);border-radius:1.5rem;padding:1.25rem;transition:all .2s;}
+.stat:hover{transform:translateY(-1px);border-color:rgba(255,255,255,.1);}
+
+/* VENDA ROW */
+.venda-row{background:rgba(13,17,23,.7);border:1px solid rgba(255,255,255,.05);border-radius:1rem;padding:.875rem;transition:all .15s;}
+.venda-row:hover{border-color:rgba(255,255,255,.1);}
+
+/* BAR CHART */
+.bar-wrap{display:flex;align-items:flex-end;gap:3px;height:64px;}
+.bar-item{flex:1;border-radius:4px 4px 0 0;min-width:6px;transition:height .4s ease;position:relative;cursor:pointer;}
+.bar-item:hover{opacity:.8;}
+
+.badge{display:inline-flex;align-items:center;border-radius:9999px;font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:.2rem .55rem;}
+.b-blue{background:rgba(59,130,246,.15);color:#60a5fa;}
+.b-green{background:rgba(16,185,129,.15);color:#34d399;}
+.b-amber{background:rgba(245,158,11,.15);color:#fbbf24;}
+.b-red{background:rgba(239,68,68,.15);color:#f87171;}
+.b-purple{background:rgba(139,92,246,.15);color:#a78bfa;}
+
+.btn-p{background:#7c3aed;color:#fff;border-radius:.875rem;font-weight:800;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;padding:.875rem 1.5rem;transition:all .2s;border:none;cursor:pointer;}
+.btn-p:hover{background:#8b5cf6;}
+
+.scroll::-webkit-scrollbar{width:3px;}
+.scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:10px;}
+.no-scroll{-ms-overflow-style:none;scrollbar-width:none;}
+.no-scroll::-webkit-scrollbar{display:none;}
+
+#toast{min-width:220px;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(4rem);opacity:0;pointer-events:none;z-index:200;transition:opacity .25s,transform .25s;background:rgba(13,17,23,.98);border:1px solid rgba(255,255,255,.09);border-radius:1.25rem;padding:1rem 1.25rem;display:flex;align-items:center;gap:.75rem;box-shadow:0 24px 48px rgba(0,0,0,.5);}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.adm-only{display:none!important;}
+body.is-admin .adm-only{display:flex!important;}
+body.is-admin .adm-only.block-only{display:block!important;}
+</style>
+</head>
+<body>
+
+<!-- LOCK -->
+<div id="lock">
+  <div style="background:rgba(13,17,23,.95);border:1px solid rgba(255,255,255,.08);border-radius:2.5rem;padding:2.5rem;width:100%;max-width:360px;margin:0 1rem;text-align:center;box-shadow:0 40px 80px rgba(0,0,0,.8);">
+    <div class="text-5xl mb-4">💜</div>
+    <h1 class="text-2xl font-black mb-1 uppercase tracking-tight">CH <span class="text-purple-400">GELADAS</span></h1>
+    <p class="text-[9px] text-slate-600 font-bold uppercase tracking-widest mb-8">Módulo Financeiro</p>
+    <input type="password" id="pinInput" autocomplete="current-password" inputmode="numeric"
+      class="w-full bg-slate-950 border-2 border-slate-800 focus:border-purple-500 p-5 rounded-2xl text-center text-2xl outline-none text-white tracking-[.4em] transition-all font-mono mb-4"
+      placeholder="· · · · ·" maxlength="8">
+    <div id="lockError" class="hidden text-[10px] text-red-400 font-bold mb-3"></div>
+    <button onclick="doLogin()" class="w-full bg-purple-700 hover:bg-purple-600 py-4 rounded-xl font-black uppercase text-xs tracking-widest transition-all">
+      <i class="fas fa-unlock-alt mr-2"></i>Entrar
+    </button>
+    <div class="mt-6"><a href="index.html" class="text-[9px] text-slate-700 hover:text-slate-500 font-bold uppercase tracking-widest transition-colors">← Hub Principal</a></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden flex flex-col min-h-screen">
+
+  <!-- HEADER -->
+  <header class="sticky top-0 z-40 px-4 py-3 flex justify-between items-center" style="background:rgba(6,8,16,.96);border-bottom:1px solid rgba(255,255,255,.04);">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">💜</span>
+      <div>
+        <h1 class="text-[10px] font-black uppercase tracking-widest text-purple-400">Financeiro</h1>
+        <p id="clock" class="text-[9px] font-mono text-slate-600 mt-0.5">00:00:00</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="abrirRelatorio()" class="btn-p !py-2 !px-3 text-[9px]">
+        <i class="fas fa-file-alt mr-1"></i>Relatório
+      </button>
+      <button onclick="resetDados()" class="adm-only w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 hover:bg-red-500/20 transition-all" title="Reset de dados">
+        <i class="fas fa-trash-alt text-xs"></i>
+      </button>
+      <button onclick="logout()" class="w-8 h-8 rounded-lg bg-slate-900 border border-white/5 flex items-center justify-center text-slate-500 hover:text-red-400 transition-all">
+        <i class="fas fa-power-off text-xs"></i>
+      </button>
+    </div>
+  </header>
+
+  <main class="flex-1 p-3 pb-28 space-y-4 max-w-4xl mx-auto w-full">
+
+    <!-- PERÍODO -->
+    <div class="flex gap-2 overflow-x-auto no-scroll pb-1">
+      <button class="per-btn active" data-per="hoje"   onclick="setPeriodo('hoje',this)">Hoje</button>
+      <button class="per-btn"        data-per="semana" onclick="setPeriodo('semana',this)">Semana</button>
+      <button class="per-btn"        data-per="mes"    onclick="setPeriodo('mes',this)">Mês</button>
+      <button class="per-btn"        data-per="ano"    onclick="setPeriodo('ano',this)">Ano</button>
+      <button class="per-btn"        data-per="geral"  onclick="setPeriodo('geral',this)">Geral</button>
+    </div>
+
+    <!-- KPIs PRINCIPAIS -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div class="stat border-l-4 border-purple-500">
+        <p class="text-[8px] font-black uppercase tracking-wider text-purple-400 mb-1">Faturamento</p>
+        <h2 id="kpiFatur" class="text-2xl font-black text-white mt-1">R$ 0,00</h2>
+        <p id="kpiFaturSub" class="text-[8px] text-slate-600 font-bold mt-1">—</p>
+      </div>
+      <div class="stat border-l-4 border-emerald-500">
+        <p class="text-[8px] font-black uppercase tracking-wider text-emerald-400 mb-1">Lucro</p>
+        <h2 id="kpiLucro" class="text-2xl font-black text-emerald-400 mt-1">R$ 0,00</h2>
+        <p id="kpiMargem" class="text-[8px] text-slate-500 font-bold mt-1">0% margem</p>
+      </div>
+      <div class="stat border-l-4 border-blue-500">
+        <p class="text-[8px] font-black uppercase tracking-wider text-blue-400 mb-1">Vendas</p>
+        <h2 id="kpiVendas" class="text-2xl font-black text-blue-400 mt-1">0</h2>
+        <p id="kpiTicket" class="text-[8px] text-slate-500 font-bold mt-1">R$ 0,00 ticket</p>
+      </div>
+      <div class="stat border-l-4 border-amber-500">
+        <p class="text-[8px] font-black uppercase tracking-wider text-amber-400 mb-1">ROI Total</p>
+        <h2 id="kpiRoi" class="text-2xl font-black text-amber-400 mt-1">—</h2>
+        <p id="kpiInvest" class="text-[8px] text-slate-500 font-bold mt-1">Investimento</p>
+      </div>
+    </div>
+
+    <!-- GRÁFICO DE BARRAS + FORMAS DE PGTO -->
+    <div class="grid lg:grid-cols-2 gap-3">
+
+      <!-- Gráfico -->
+      <div class="stat">
+        <div class="flex items-center justify-between mb-4">
+          <p id="graficoLabel" class="text-[9px] font-black uppercase tracking-wider text-purple-400">Por Hora</p>
+          <span id="graficoTotal" class="badge b-purple text-[8px]">R$ 0,00</span>
+        </div>
+        <div id="grafico" class="bar-wrap"></div>
+        <div id="graficoLegenda" class="flex gap-2 overflow-x-auto no-scroll mt-2"></div>
+      </div>
+
+      <!-- Formas de pagamento -->
+      <div class="stat">
+        <p class="text-[9px] font-black uppercase tracking-wider text-blue-400 mb-4">Por Forma de Pagamento</p>
+        <div id="formasPgto" class="space-y-2"></div>
+      </div>
+    </div>
+
+    <!-- TOP PRODUTOS -->
+    <div class="stat">
+      <p class="text-[9px] font-black uppercase tracking-wider text-amber-400 mb-4">Top Produtos do Período</p>
+      <div id="topProdutos" class="grid grid-cols-2 lg:grid-cols-4 gap-2"></div>
+    </div>
+
+    <!-- HISTÓRICO DE VENDAS -->
+    <div class="stat">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-[9px] font-black uppercase tracking-wider text-slate-400">Histórico de Vendas</p>
+        <span id="histTotal" class="badge b-blue text-[8px]">0</span>
+      </div>
+      <input type="text" id="histBusca" oninput="renderHistorico()" class="inp !py-2 !text-xs mb-3" placeholder="Filtrar por produto, pagamento...">
+      <div id="historico" class="space-y-2 max-h-80 overflow-y-auto scroll"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ══════ MODAL RELATÓRIO ══════ -->
+<div id="modalRelatorio" class="modal">
+  <div class="modal-box max-w-sm p-0 overflow-hidden">
+    <div class="p-5 border-b border-white/5 flex items-center justify-between">
+      <div>
+        <h3 class="text-sm font-black text-purple-400 flex items-center gap-2"><i class="fas fa-chart-line"></i> Relatório Financeiro</h3>
+        <p id="relPeriodoLabel" class="text-[9px] text-slate-500 font-bold mt-0.5"></p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="copiarRelatorio()" class="w-8 h-8 rounded-lg bg-purple-600/20 text-purple-400 hover:bg-purple-600/30 flex items-center justify-center"><i class="fas fa-copy text-sm"></i></button>
+        <button onclick="baixarRelatorio()" class="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 flex items-center justify-center"><i class="fas fa-download text-sm"></i></button>
+        <button onclick="UIService.closeModal('modalRelatorio')" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
+      </div>
+    </div>
+    <div class="overflow-y-auto scroll" style="max-height:78vh;">
+
+      <!-- Resumo executivo -->
+      <div class="p-5 border-b border-white/5 space-y-2">
+        <p class="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3">Resumo Executivo</p>
+        <div class="bg-slate-900/60 border border-white/5 rounded-2xl overflow-hidden">
+          <div id="relLinhas" class="divide-y divide-white/5"></div>
+        </div>
+      </div>
+
+      <!-- Por dia (período semana/mês) -->
+      <div id="relPorDiaWrap" class="p-5 border-b border-white/5">
+        <p class="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3">Por Dia</p>
+        <div id="relPorDia" class="space-y-1.5 max-h-48 overflow-y-auto scroll"></div>
+      </div>
+
+      <!-- Top produtos no relatório -->
+      <div class="p-5">
+        <p class="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3">Top Produtos</p>
+        <div id="relTopProd" class="space-y-1.5"></div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast">
+  <div id="toastIcon" class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-black"></div>
+  <div><span id="toastMsg" class="text-[11px] font-black uppercase tracking-wide block"></span><span id="toastSub" class="text-[9px] text-slate-500 font-bold"></span></div>
+</div>
+
+<script src="core.js"></script>
+  <script src="./services/syncService.js"></script>
+  <script src="./services/auditService.js"></script>
+  <script src="./services/syncMonitor.js"></script>
+  <script src="./services/backupService.js"></script>
+
+  <script src="./services/financeiroService.js"></script>
+<script>
+'use strict';
+
+/* ═══════════════════════════════════
+   LOGIN
+═══════════════════════════════════ */
+async function doLogin() {
+  const pin = document.getElementById('pinInput').value.trim();
+  const ok  = await AuthService.login(pin);
+  if (ok) {
+    document.getElementById('lock').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    init();
+  } else {
+    const err = document.getElementById('lockError');
+    err.textContent = 'PIN incorreto.';
+    err.classList.remove('hidden');
+    document.getElementById('pinInput').value = '';
+  }
+}
+document.getElementById('pinInput').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+function logout() { if (!confirm('Encerrar sessão?')) return; AuthService.logout(); location.reload(); }
+
+/* ═══════════════════════════════════
+   ESTADO
+═══════════════════════════════════ */
+let _periodo = 'hoje';
+
+/* ═══════════════════════════════════
+   INIT
+═══════════════════════════════════ */
+function init() {
+  UIService.startClock('clock');
+  renderTudo();
+  EventBus.on('store:updated', renderTudo);
+}
+
+function setPeriodo(per, btn) {
+  _periodo = per;
+  document.querySelectorAll('.per-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTudo();
+}
+
+/* ═══════════════════════════════════
+   FILTRAR VENDAS POR PERÍODO
+═══════════════════════════════════ */
+function filtrarVendas() {
+  const todas  = Store.getVendas();
+  const agora  = new Date();
+  const hoje   = Utils.todayISO();
+
+  if (_periodo === 'hoje')   return todas.filter(v => v.dataCurta === hoje);
+  if (_periodo === 'semana') {
+    const ini = new Date(agora); ini.setDate(ini.getDate() - 6); ini.setHours(0,0,0,0);
+    return todas.filter(v => new Date(v.criadoEm || v.dataCurta) >= ini);
+  }
+  if (_periodo === 'mes') {
+    const ini = new Date(agora.getFullYear(), agora.getMonth(), 1);
+    return todas.filter(v => new Date(v.criadoEm || v.dataCurta) >= ini);
+  }
+  if (_periodo === 'ano') {
+    const ini = new Date(agora.getFullYear(), 0, 1);
+    return todas.filter(v => new Date(v.criadoEm || v.dataCurta) >= ini);
+  }
+  return todas; // geral
+}
+
+/* ═══════════════════════════════════
+   RENDER TUDO
+═══════════════════════════════════ */
+function renderTudo() {
+  const vendas  = filtrarVendas();
+  const fatur   = vendas.reduce((s,v) => s + (v.total||0), 0);
+  const lucro   = vendas.reduce((s,v) => s + (v.lucro||0), 0);
+  const margem  = fatur > 0 ? (lucro/fatur*100).toFixed(1) : 0;
+  const ticket  = vendas.length ? fatur/vendas.length : 0;
+
+  // FinanceiroService — despesas e saldo real do período
+  let despesas = 0;
+  if (window.CH?.FinanceiroService) {
+    const hoje  = Utils.todayISO();
+    const agora = new Date();
+    let dataDe  = hoje;
+    if (_periodo === 'semana') { const d=new Date(); d.setDate(d.getDate()-6); dataDe=d.toISOString().slice(0,10); }
+    if (_periodo === 'mes')    { dataDe=new Date(agora.getFullYear(),agora.getMonth(),1).toISOString().slice(0,10); }
+    if (_periodo === 'ano')    { dataDe=new Date(agora.getFullYear(),0,1).toISOString().slice(0,10); }
+    if (_periodo === 'geral')  { dataDe='2000-01-01'; }
+    const lancamentos = window.CH.FinanceiroService.getLancamentos({ dataDe, dataAte: hoje });
+    despesas = lancamentos.filter(l => l.tipo === 'despesa').reduce((s,l) => s + l.valor, 0);
+  }
+
+  // Investimento e ROI
+  const invest  = Store.getInvestimento();
+  const lucroAcum = Store.getVendas().reduce((s,v) => s+(v.lucro||0), 0);
+  const roi     = invest > 0 ? ((lucroAcum/invest)*100).toFixed(1) + '%' : '—';
+
+  // Label do período
+  const labels = { hoje:'Hoje', semana:'Últimos 7 dias', mes:'Este mês', ano:'Este ano', geral:'Todo o período' };
+
+  // KPIs
+  _set('kpiFatur',    Utils.formatCurrency(fatur));
+  _set('kpiFaturSub', `${vendas.length} venda${vendas.length!==1?'s':''} · ${labels[_periodo]}`);
+  _set('kpiLucro',    Utils.formatCurrency(lucro));
+  _set('kpiMargem',   `${margem}% margem`);
+  _set('kpiVendas',   vendas.length);
+  _set('kpiTicket',   `${Utils.formatCurrency(ticket)} ticket`);
+  _set('kpiRoi',      roi);
+  _set('kpiInvest',   invest > 0 ? Utils.formatCurrency(invest) : 'Sem investimento');
+
+  renderGrafico(vendas);
+  renderFormasPgto(vendas);
+  renderTopProdutos(vendas);
+  renderHistorico();
+}
+
+/* ═══════════════════════════════════
+   GRÁFICO DE BARRAS
+═══════════════════════════════════ */
+function renderGrafico(vendas) {
+  const el      = document.getElementById('grafico');
+  const leg     = document.getElementById('graficoLegenda');
+  const label   = document.getElementById('graficoLabel');
+  const totEl   = document.getElementById('graficoTotal');
+  if (!el) return;
+
+  let dados = [];
+  let titulo = 'Por Hora';
+
+  if (_periodo === 'hoje') {
+    // Agrupa por hora
+    titulo = 'Por Hora';
+    const horas = {};
+    vendas.forEach(v => {
+      const h = (v.hora||'00:00').split(':')[0];
+      horas[h] = (horas[h]||0) + (v.total||0);
+    });
+    for (let h = 6; h <= 23; h++) {
+      const hStr = String(h).padStart(2,'0');
+      dados.push({ label: hStr+'h', valor: horas[hStr]||0 });
+    }
+  } else if (_periodo === 'semana') {
+    titulo = 'Por Dia';
+    const dias = {};
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(); d.setDate(d.getDate()-i);
+      const iso = d.toISOString().slice(0,10);
+      const fmt = d.toLocaleDateString('pt-BR',{weekday:'short'}).slice(0,3);
+      dias[iso] = { label: fmt, valor: 0 };
+    }
+    vendas.forEach(v => { if (dias[v.dataCurta]) dias[v.dataCurta].valor += (v.total||0); });
+    dados = Object.values(dias);
+  } else if (_periodo === 'mes') {
+    titulo = 'Por Semana';
+    const semanas = ['S1','S2','S3','S4','S5'];
+    const acc = [0,0,0,0,0];
+    vendas.forEach(v => {
+      const dia = new Date(v.criadoEm||v.dataCurta).getDate();
+      const idx = Math.min(Math.floor((dia-1)/7), 4);
+      acc[idx] += (v.total||0);
+    });
+    dados = semanas.map((l,i) => ({ label: l, valor: acc[i] }));
+  } else {
+    titulo = 'Por Mês';
+    const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    const acc   = new Array(12).fill(0);
+    vendas.forEach(v => {
+      const m = new Date(v.criadoEm||v.dataCurta).getMonth();
+      acc[m] += (v.total||0);
+    });
+    dados = meses.map((l,i) => ({ label: l, valor: acc[i] }));
+  }
+
+  if (label) label.textContent = titulo;
+
+  const max   = Math.max(...dados.map(d=>d.valor), 1);
+  const total = dados.reduce((s,d)=>s+d.valor,0);
+  if (totEl) totEl.textContent = Utils.formatCurrency(total);
+
+  // Barras
+  el.innerHTML = dados.map(d => {
+    const pct  = Math.max(4, Math.round((d.valor/max)*100));
+    const cor  = d.valor > 0 ? '#8b5cf6' : '#1e293b';
+    const title= `${d.label}: ${Utils.formatCurrency(d.valor)}`;
+    return `<div class="bar-item" style="height:${pct}%;background:${cor};" title="${title}"></div>`;
+  }).join('');
+
+  // Legenda (só mostra os que têm valor, máx 6)
+  const comValor = dados.filter(d=>d.valor>0).slice(0,6);
+  if (leg) leg.innerHTML = comValor.map(d =>
+    `<span class="text-[8px] text-slate-600 font-bold flex-shrink-0">${d.label}</span>`
+  ).join('');
+}
+
+/* ═══════════════════════════════════
+   FORMAS DE PAGAMENTO
+═══════════════════════════════════ */
+function renderFormasPgto(vendas) {
+  const el = document.getElementById('formasPgto');
+  if (!el) return;
+  const pgtos = {};
+  const total = vendas.reduce((s,v)=>s+(v.total||0),0);
+  vendas.forEach(v => {
+    const f = v.formaPgto||'Outro';
+    pgtos[f] = (pgtos[f]||0) + (v.total||0);
+  });
+  const sorted = Object.entries(pgtos).sort((a,b)=>b[1]-a[1]);
+  if (sorted.length === 0) {
+    el.innerHTML = '<p class="text-[9px] text-slate-600 text-center py-4 font-bold">Sem vendas no período</p>';
+    return;
+  }
+  const icons = { Dinheiro:'💵', Pix:'📱', Débito:'💳', Crédito:'💳', Fiado:'🤝' };
+  el.innerHTML = sorted.map(([f, v]) => {
+    const pct = total > 0 ? (v/total*100).toFixed(0) : 0;
+    return `<div class="space-y-1">
+      <div class="flex items-center justify-between">
+        <span class="text-[10px] font-black text-slate-300">${icons[f]||'💰'} ${f}</span>
+        <div class="text-right">
+          <span class="text-[10px] font-black text-purple-400">${Utils.formatCurrency(v)}</span>
+          <span class="text-[8px] text-slate-600 font-bold ml-2">${pct}%</span>
+        </div>
+      </div>
+      <div class="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+        <div class="h-full bg-purple-500 rounded-full transition-all" style="width:${pct}%"></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════
+   TOP PRODUTOS
+═══════════════════════════════════ */
+function renderTopProdutos(vendas) {
+  const el = document.getElementById('topProdutos');
+  if (!el) return;
+  const prods = {};
+  vendas.forEach(v => v.itens?.forEach(i => {
+    const k = i.nome||'?';
+    if (!prods[k]) prods[k] = { qtd: 0, total: 0 };
+    prods[k].qtd   += i.qtd||1;
+    prods[k].total += (i.preco||0)*(i.qtd||1);
+  }));
+  const top = Object.entries(prods).sort((a,b)=>b[1].total-a[1].total).slice(0,8);
+  if (top.length === 0) {
+    el.innerHTML = '<p class="col-span-4 text-[9px] text-slate-600 text-center py-4 font-bold">Sem dados</p>';
+    return;
+  }
+  const icons = ['🥇','🥈','🥉','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣'];
+  el.innerHTML = top.map(([nome,d],i) => `
+    <div class="bg-slate-900/60 border border-white/5 rounded-xl p-3 text-center">
+      <p class="text-lg mb-1">${icons[i]}</p>
+      <p class="text-[9px] font-black text-white truncate mb-1" title="${nome}">${nome}</p>
+      <p class="text-[10px] font-black text-purple-400">${Utils.formatCurrency(d.total)}</p>
+      <p class="text-[8px] text-slate-500 font-bold">${d.qtd} un</p>
+    </div>`).join('');
+}
+
+/* ═══════════════════════════════════
+   HISTÓRICO
+═══════════════════════════════════ */
+function renderHistorico() {
+  const busca  = (document.getElementById('histBusca')?.value||'').toLowerCase();
+  let vendas   = filtrarVendas();
+  const histEl = document.getElementById('histTotal');
+  if (busca) {
+    vendas = vendas.filter(v =>
+      (v.formaPgto||'').toLowerCase().includes(busca) ||
+      (v.itens||[]).some(i => (i.nome||'').toLowerCase().includes(busca)) ||
+      (v.hora||'').includes(busca) ||
+      (v.data||'').includes(busca)
+    );
+  }
+  if (histEl) histEl.textContent = vendas.length;
+  const el = document.getElementById('historico');
+  if (!el) return;
+  if (vendas.length === 0) {
+    el.innerHTML = '<p class="text-[9px] text-slate-600 text-center py-8 font-bold">Nenhuma venda encontrada</p>';
+    return;
+  }
+  el.innerHTML = [...vendas].slice(0,100).map(v => {
+    const pgtoIcon = {Dinheiro:'💵',Pix:'📱',Débito:'💳',Crédito:'💳',Fiado:'🤝'}[v.formaPgto]||'💰';
+    const lucroPos = (v.lucro||0) > 0;
+    const cancelada = v.status === 'CANCELADA';
+    return `<div class="venda-row ${cancelada?'opacity-50':''}">
+      <div class="flex items-center justify-between">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-[10px] font-black ${cancelada?'text-slate-500 line-through':'text-white'}">${pgtoIcon} ${Utils.formatCurrency(v.total||0)}</span>
+            ${cancelada?'<span class="badge b-red text-[7px]">CANCELADA</span>':''}
+            <span class="badge b-blue text-[8px]">${v.itens?.length||0} item${(v.itens?.length||0)!==1?'s':''}</span>
+            ${v.desconto>0?`<span class="badge b-amber text-[8px]">-${Utils.formatCurrency(v.desconto)}</span>`:''}
+            ${v.operador?`<span class="badge b-slate text-[7px]">${v.operador}</span>`:''}
+          </div>
+          <p class="text-[8px] text-slate-500 font-bold mt-0.5">${v.data||''} ${v.hora||''} · ${v.formaPgto||'—'}</p>
+          <p class="text-[8px] text-slate-700 font-bold truncate">${(v.itens||[]).map(i=>i.nome).join(', ')}</p>
+          ${cancelada&&v.motivoCancelamento?`<p class="text-[8px] text-red-400/70 font-bold mt-0.5">Motivo: ${v.motivoCancelamento}</p>`:''}
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0 ml-3">
+          <div class="text-right">
+            <p class="text-[10px] font-black ${lucroPos&&!cancelada?'text-emerald-400':'text-slate-500'}">${Utils.formatCurrency(v.lucro||0)}</p>
+            <p class="text-[7px] text-slate-700 font-bold uppercase">lucro</p>
+          </div>
+          ${!cancelada?`<button onclick="cancelarVenda('${v.id}')" class="adm-only w-7 h-7 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center justify-center transition-all flex-shrink-0" title="Cancelar venda">
+            <i class="fas fa-ban text-[9px]"></i>
+          </button>`:''}
+          <button onclick="apagarVenda('${v.id}')" class="adm-only w-7 h-7 rounded-lg bg-slate-700/30 text-slate-600 hover:bg-slate-700/50 flex items-center justify-center transition-all flex-shrink-0" title="Apagar permanentemente">
+            <i class="fas fa-trash text-[9px]"></i>
+          </button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════════════════════════════
+   RELATÓRIO
+═══════════════════════════════════ */
+function abrirRelatorio() {
+  const vendas  = filtrarVendas();
+  const fatur   = vendas.reduce((s,v)=>s+(v.total||0),0);
+  const lucro   = vendas.reduce((s,v)=>s+(v.lucro||0),0);
+  const margem  = fatur>0?(lucro/fatur*100).toFixed(1):0;
+  const ticket  = vendas.length?fatur/vendas.length:0;
+  const labels  = {hoje:'Hoje — '+Utils.today(),semana:'Últimos 7 dias',mes:'Este mês',ano:'Este ano',geral:'Todo o período'};
+
+  _set('relPeriodoLabel', labels[_periodo]);
+
+  // Linhas resumo
+  const linhas = [
+    ['Período',       labels[_periodo]],
+    ['Faturamento',   Utils.formatCurrency(fatur)],
+    ['Lucro Bruto',   Utils.formatCurrency(lucro)],
+    ['Margem',        margem + '%'],
+    ['Nº de Vendas',  vendas.length],
+    ['Ticket Médio',  Utils.formatCurrency(ticket)],
+  ];
+  document.getElementById('relLinhas').innerHTML = linhas.map(([k,v]) => `
+    <div class="flex justify-between items-center px-4 py-2.5">
+      <span class="text-[10px] text-slate-400 font-bold">${k}</span>
+      <span class="text-[10px] font-black text-white">${v}</span>
+    </div>`).join('');
+
+  // Por dia (semana/mês)
+  const porDiaWrap = document.getElementById('relPorDiaWrap');
+  if (_periodo === 'semana' || _periodo === 'mes') {
+    porDiaWrap?.classList.remove('hidden');
+    const dias = {};
+    vendas.forEach(v => {
+      const d = v.dataCurta||v.data||'?';
+      if (!dias[d]) dias[d] = { fatur:0, qtd:0 };
+      dias[d].fatur += v.total||0;
+      dias[d].qtd++;
+    });
+    document.getElementById('relPorDia').innerHTML = Object.entries(dias)
+      .sort((a,b)=>b[0].localeCompare(a[0]))
+      .map(([d,val]) => `
+        <div class="flex justify-between items-center bg-slate-900/60 border border-white/5 rounded-xl px-3 py-2">
+          <span class="text-[10px] font-black text-slate-300">${d}</span>
+          <div class="text-right">
+            <span class="text-[10px] font-black text-purple-400">${Utils.formatCurrency(val.fatur)}</span>
+            <span class="text-[8px] text-slate-600 font-bold ml-2">${val.qtd} venda${val.qtd!==1?'s':''}</span>
+          </div>
+        </div>`).join('') || '<p class="text-[9px] text-slate-600 text-center py-2 font-bold">Sem dados</p>';
+  } else {
+    porDiaWrap?.classList.add('hidden');
+  }
+
+  // Top produtos
+  const prods = {};
+  vendas.forEach(v => v.itens?.forEach(i => {
+    const k = i.nome||'?';
+    if (!prods[k]) prods[k] = { qtd:0, total:0 };
+    prods[k].qtd   += i.qtd||1;
+    prods[k].total += (i.preco||0)*(i.qtd||1);
+  }));
+  const topProd = Object.entries(prods).sort((a,b)=>b[1].total-a[1].total).slice(0,10);
+  const topIcons = ['🥇','🥈','🥉'];
+  document.getElementById('relTopProd').innerHTML = topProd.map(([n,d],i) => `
+    <div class="flex items-center justify-between bg-slate-900/60 border border-white/5 rounded-xl px-3 py-2">
+      <span class="text-[10px] font-black text-slate-300">${topIcons[i]||`${i+1}.`} ${n}</span>
+      <div class="text-right">
+        <span class="text-[10px] font-black text-amber-400">${Utils.formatCurrency(d.total)}</span>
+        <span class="text-[8px] text-slate-600 font-bold ml-2">${d.qtd} un</span>
+      </div>
+    </div>`).join('') || '<p class="text-[9px] text-slate-600 text-center py-2 font-bold">Sem dados</p>';
+
+  UIService.openModal('modalRelatorio');
+}
+
+function _gerarTextoRelatorio() {
+  const vendas  = filtrarVendas();
+  const fatur   = vendas.reduce((s,v)=>s+(v.total||0),0);
+  const lucro   = vendas.reduce((s,v)=>s+(v.lucro||0),0);
+  const margem  = fatur>0?(lucro/fatur*100).toFixed(1):0;
+  const ticket  = vendas.length?fatur/vendas.length:0;
+  const cfg     = Store.getConfig();
+  const nomeLoja= cfg?.nome||'CH Geladas';
+  const labels  = {hoje:'Hoje — '+Utils.today(),semana:'Últimos 7 dias',mes:'Este mês',ano:'Este ano',geral:'Todo o período'};
+  const sep     = '═'.repeat(44);
+  const sep2    = '─'.repeat(44);
+  let txt = `${sep}\n  ${nomeLoja} — RELATÓRIO FINANCEIRO\n  ${labels[_periodo]}\n  Gerado: ${Utils.nowFull()}\n${sep}\n\n`;
+  txt += `RESUMO\n${sep2}\n`;
+  txt += `  Faturamento:   ${Utils.formatCurrency(fatur)}\n`;
+  txt += `  Lucro Bruto:   ${Utils.formatCurrency(lucro)}\n`;
+  txt += `  Margem:        ${margem}%\n`;
+  txt += `  Nº Vendas:     ${vendas.length}\n`;
+  txt += `  Ticket Médio:  ${Utils.formatCurrency(ticket)}\n\n`;
+
+  // Formas de pgto
+  const pgtos = {};
+  vendas.forEach(v => { const f=v.formaPgto||'Outro'; pgtos[f]=(pgtos[f]||0)+(v.total||0); });
+  txt += `FORMAS DE PAGAMENTO\n${sep2}\n`;
+  Object.entries(pgtos).sort((a,b)=>b[1]-a[1]).forEach(([f,v]) => txt += `  ${f.padEnd(12)} ${Utils.formatCurrency(v)}\n`);
+  txt += '\n';
+
+  // Top produtos
+  const prods = {};
+  vendas.forEach(v => v.itens?.forEach(i => {
+    const k=i.nome||'?';
+    if(!prods[k]) prods[k]={qtd:0,total:0};
+    prods[k].qtd+=(i.qtd||1); prods[k].total+=(i.preco||0)*(i.qtd||1);
+  }));
+  txt += `TOP PRODUTOS\n${sep2}\n`;
+  Object.entries(prods).sort((a,b)=>b[1].total-a[1].total).slice(0,10).forEach(([n,d],i) => {
+    txt += `  ${i+1}. ${n.padEnd(28)} ${Utils.formatCurrency(d.total).padStart(12)}  (${d.qtd} un)\n`;
+  });
+  txt += `\n${sep}\nGerado por ${nomeLoja} PDV\n${sep}\n`;
+  return txt;
+}
+
+function copiarRelatorio() {
+  Utils.copyToClipboard(_gerarTextoRelatorio())
+    .then(() => UIService.showToast('Relatório copiado!', '', 'success'));
+}
+function baixarRelatorio() {
+  Utils.downloadBlob(_gerarTextoRelatorio(), 'text/plain;charset=utf-8;', `relatorio_financeiro_${_periodo}_${Utils.todayISO()}.txt`);
+  UIService.showToast('Relatório salvo!', '', 'success');
+}
+
+/* ═══════════════════════════════════
+   UTIL
+═══════════════════════════════════ */
+function _set(id, val) { const el=document.getElementById(id); if(el) el.textContent=val; }
+
+/* ═══ ADM — CANCELAR VENDA ═══ */
+function cancelarVenda(vendaId) {
+  if (!AuthService.isAdmin()) { UIService.showToast('Apenas ADM','','error'); return; }
+  const venda = Store.getVendas().find(v=>v.id===vendaId);
+  if (!venda) return;
+  const motivo = prompt(`Cancelar venda de ${Utils.formatCurrency(venda.total)}?\n\nInforme o motivo do cancelamento:`);
+  if (motivo === null) return; // clicou cancelar
+  if (!motivo.trim()) { UIService.showToast('Informe o motivo','','error'); return; }
+  Store.mutateVendas(vendas => {
+    const v = vendas.find(x=>x.id===vendaId);
+    if (!v) return;
+    v.status = 'CANCELADA';
+    v.motivoCancelamento = motivo.trim();
+    v.canceladoEm = new Date().toISOString();
+    v.canceladoPor = AuthService.getNome();
+    // Neutralizar valores para não contar no financeiro
+    v._totalOriginal = v.total;
+    v._lucroOriginal = v.lucro;
+    v.total = 0;
+    v.lucro = 0;
+  });
+  UIService.showToast('Venda cancelada','','warning');
+  renderHistorico();
+  renderTudo();
+}
+
+/* ═══ ADM — RESET DE DADOS ═══ */
+function resetDados() {
+  if (!AuthService.isAdmin()) { UIService.showToast('Apenas ADM','','error'); return; }
+  const confirmacao = prompt(
+    '⚠️ RESET DE DADOS FINANCEIROS\n\n' +
+    'Esta ação apagará TODAS as vendas permanentemente.\n' +
+    'Esta operação NÃO PODE ser desfeita.\n\n' +
+    'Digite CONFIRMAR para prosseguir:'
+  );
+  if (confirmacao !== 'CONFIRMAR') { UIService.showToast('Reset cancelado','','warning'); return; }
+  if (!confirm('Tem certeza absoluta? Todos os dados de vendas serão apagados!')) return;
+  Store.mutateVendas(vendas => { vendas.splice(0, vendas.length); });
+  UIService.showToast('Dados resetados!','Todas as vendas foram apagadas','warning');
+  renderTudo();
+}
+
+/* ═══ ADM — APAGAR VENDA ═══ */
+function apagarVenda(vendaId) {
+  if (!AuthService.isAdmin()) { UIService.showToast('Apenas ADM','','error'); return; }
+  const venda = Store.getVendas().find(v=>v.id===vendaId);
+  if (!venda) return;
+  if (!confirm(`Apagar venda de ${Utils.formatCurrency(venda.total)}?\nO estoque NÃO será restaurado.`)) return;
+  Store.mutateVendas(vendas => {
+    const idx = vendas.findIndex(v=>v.id===vendaId);
+    if (idx>=0) vendas.splice(idx,1);
+  });
+  UIService.showToast('Venda apagada','','warning');
+  renderHistorico();
+  renderTudo();
+}
+
+/* ═══════════════════════════════════
+   INIT CHECK
+═══════════════════════════════════ */
+window.addEventListener('DOMContentLoaded', () => {
+  if (AuthService.isLogged()) {
+    document.getElementById('lock').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    init();
+  }
+});
+</script>
+</body>
+</html>

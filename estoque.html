@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#04060d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CH Geladas">
+<title>Estoque — CH Geladas</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
+*{box-sizing:border-box;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:#060810;background-image:radial-gradient(ellipse at 80% 20%,rgba(16,185,129,.04) 0%,transparent 60%);color:#f1f5f9;min-height:100vh;user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+#lock{position:fixed;inset:0;z-index:9999;background:radial-gradient(ellipse at 50% 40%,#0a1f18 0%,#060810 70%);display:flex;align-items:center;justify-content:center;}
+#lock.hidden{display:none;}
+.modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(0,0,0,.8);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s,visibility .2s;}
+.modal.open{opacity:1;visibility:visible;pointer-events:auto;}
+.modal.open>.modal-box{animation:mIn .22s cubic-bezier(.34,1.56,.64,1) forwards;}
+@keyframes mIn{from{opacity:0;transform:scale(.93) translateY(8px);}to{opacity:1;transform:scale(1) translateY(0);}}
+.modal-box{background:rgba(13,17,23,.98);border:1px solid rgba(255,255,255,.09);border-radius:2rem;width:100%;box-shadow:0 32px 64px rgba(0,0,0,.6);}
+.inp{font-size:16px!important;padding:12px 14px;color:#fff;background:#1e293b;border:2px solid #334155;border-radius:.75rem;width:100%;outline:none;transition:all .2s;font-family:inherit;}
+.inp:focus{border-color:#10b981!important;box-shadow:0 0 0 4px rgba(16,185,129,.2)!important;background:#0f172a;}
+.inp::placeholder{color:#64748b;}
+.label{color:#34d399;font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.35rem;display:block;}
+.badge{display:inline-flex;align-items:center;border-radius:9999px;font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:.2rem .55rem;}
+.b-blue{background:rgba(59,130,246,.15);color:#60a5fa;}.b-green{background:rgba(16,185,129,.15);color:#34d399;}.b-amber{background:rgba(245,158,11,.15);color:#fbbf24;}.b-red{background:rgba(239,68,68,.15);color:#f87171;}.b-purple{background:rgba(139,92,246,.15);color:#a78bfa;}
+.prod-card{background:rgba(13,17,23,.85);border:1px solid rgba(255,255,255,.06);border-left:3px solid #10b981;border-radius:1.25rem;padding:1rem;transition:all .2s;}
+.prod-card:hover{border-color:rgba(16,185,129,.3);transform:translateY(-1px);}
+.prod-card.warning{border-left-color:#f59e0b;}.prod-card.esgotado{border-left-color:#374151;opacity:.55;}
+.sk-btn{width:1.85rem;height:1.85rem;border-radius:.5rem;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1rem;border:1px solid rgba(255,255,255,.06);transition:all .15s;cursor:pointer;}
+.sk-m{background:rgba(239,68,68,.08);color:#f87171;}.sk-m:hover{background:rgba(239,68,68,.25);}
+.sk-p{background:rgba(16,185,129,.08);color:#34d399;}.sk-p:hover{background:rgba(16,185,129,.25);}
+.tab-btn{padding:.55rem 1rem;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;border-radius:.75rem .75rem 0 0;color:#4b5563;border-bottom:2px solid transparent;transition:all .15s;cursor:pointer;}
+.tab-btn.active{color:#34d399;border-bottom-color:#10b981;background:rgba(16,185,129,.07);}
+.tab-pane{display:none;}.tab-pane.active{display:block;animation:fadeUp .2s ease-out;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.stat{background:rgba(13,17,23,.85);border:1px solid rgba(255,255,255,.06);border-radius:1.5rem;padding:1.25rem;}
+.pack-row{display:flex;align-items:center;gap:.5rem;background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.15);border-radius:.75rem;padding:.5rem .75rem;}
+.audit-row{background:rgba(13,17,23,.7);border:1px solid rgba(255,255,255,.05);border-radius:.875rem;padding:.75rem 1rem;}
+#toast{min-width:220px;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(4rem);opacity:0;pointer-events:none;z-index:200;transition:opacity .25s,transform .25s;background:rgba(13,17,23,.98);border:1px solid rgba(255,255,255,.09);border-radius:1.25rem;padding:1rem 1.25rem;display:flex;align-items:center;gap:.75rem;box-shadow:0 24px 48px rgba(0,0,0,.5);}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.scroll::-webkit-scrollbar{width:3px;}.scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:10px;}
+.no-scroll{-ms-overflow-style:none;scrollbar-width:none;overflow-x:auto;}.no-scroll::-webkit-scrollbar{display:none;}
+.adm-only{display:none!important;}body.is-admin .adm-only{display:block!important;}
+</style>
+</head>
+<body>
+<div id="lock">
+  <div style="background:rgba(13,17,23,.95);border:1px solid rgba(255,255,255,.08);border-radius:2.5rem;padding:2.5rem;width:100%;max-width:360px;margin:0 1rem;text-align:center;">
+    <div class="text-5xl mb-4">📦</div>
+    <h1 class="text-2xl font-black mb-1 uppercase">CH <span class="text-emerald-400">GELADAS</span></h1>
+    <p class="text-[9px] text-slate-600 font-bold uppercase tracking-widest mb-8">Módulo de Estoque</p>
+    <input type="password" id="pinInput" inputmode="numeric" class="w-full bg-slate-950 border-2 border-slate-800 focus:border-emerald-500 p-5 rounded-2xl text-center text-2xl outline-none text-white tracking-[.4em] transition-all font-mono mb-4" placeholder="· · · · ·" maxlength="8">
+    <div id="lockError" class="hidden text-[10px] text-red-400 font-bold mb-3"></div>
+    <button onclick="doLogin()" class="w-full bg-emerald-600 hover:bg-emerald-500 py-4 rounded-xl font-black uppercase text-xs tracking-widest transition-all"><i class="fas fa-unlock-alt mr-2"></i>Entrar</button>
+    <div class="mt-6"><a href="index.html" class="text-[9px] text-slate-700 hover:text-slate-500 font-bold uppercase tracking-widest">← Hub Principal</a></div>
+  </div>
+</div>
+
+<div id="app" class="hidden flex flex-col min-h-screen">
+  <header class="sticky top-0 z-40 px-4 py-3 flex justify-between items-center" style="background:rgba(6,8,16,.96);border-bottom:1px solid rgba(255,255,255,.04);">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">📦</span>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-[10px] font-black uppercase tracking-widest text-emerald-400">Estoque</h1>
+          <span id="roleTag" class="badge b-green hidden"></span>
+        </div>
+        <p id="clock" class="text-[9px] font-mono text-slate-600 mt-0.5">00:00:00</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="abrirRelatorio()" class="w-8 h-8 rounded-lg bg-slate-900 border border-white/5 flex items-center justify-center text-slate-500 hover:text-emerald-400 transition-all"><i class="fas fa-chart-bar text-xs"></i></button>
+      <button onclick="switchTab('form')" class="adm-only px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-black text-[10px] uppercase transition-all flex items-center gap-1.5"><i class="fas fa-plus text-[9px]"></i>Novo</button>
+      <button onclick="logout()" class="w-8 h-8 rounded-lg bg-slate-900 border border-white/5 flex items-center justify-center text-slate-500 hover:text-red-400 transition-all"><i class="fas fa-power-off text-xs"></i></button>
+    </div>
+  </header>
+
+  <div class="px-4 pt-3 flex gap-1 border-b border-white/5 overflow-x-auto no-scroll">
+    <button id="tbLista" class="tab-btn active" onclick="switchTab('lista')">📋 Produtos</button>
+    <button id="tbForm"  class="tab-btn adm-only" onclick="switchTab('form')">➕ Cadastrar</button>
+    <button id="tbAudit" class="tab-btn" onclick="switchTab('audit')">🔍 Auditoria</button>
+    <button id="tbCats"  class="tab-btn adm-only" onclick="switchTab('cats')">🏷️ Categorias</button>
+  </div>
+
+  <main class="flex-1 p-3 lg:p-4 max-w-5xl mx-auto w-full pb-10">
+
+    <!-- LISTA -->
+    <div id="tab-lista" class="tab-pane active space-y-4 pt-3">
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="stat border-l-4 border-emerald-500 text-center"><p class="text-[8px] text-slate-600 uppercase font-bold">Produtos</p><p id="kpiTotal" class="text-2xl font-black text-white mt-1">0</p></div>
+        <div class="stat border-l-4 border-blue-500 text-center"><p class="text-[8px] text-slate-600 uppercase font-bold">Valor Stock</p><p id="kpiValor" class="text-xl font-black text-blue-400 mt-1">R$ 0</p></div>
+        <div class="stat border-l-4 border-amber-500 text-center"><p class="text-[8px] text-slate-600 uppercase font-bold">Stock Baixo</p><p id="kpiBaixo" class="text-2xl font-black text-amber-400 mt-1">0</p></div>
+        <div class="stat border-l-4 border-red-500 text-center"><p class="text-[8px] text-slate-600 uppercase font-bold">Esgotados</p><p id="kpiEsgotado" class="text-2xl font-black text-red-400 mt-1">0</p></div>
+      </div>
+      <div class="flex gap-2 flex-wrap">
+        <div class="relative flex-1 min-w-[160px]">
+          <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs pointer-events-none"></i>
+          <input type="text" id="busca" oninput="clearTimeout(this._t);this._t=setTimeout(renderLista,150)" class="inp !pl-9 !py-2.5 !text-xs" placeholder="Pesquisar...">
+        </div>
+        <select id="filtroStatus" onchange="renderLista()" class="inp !w-auto !py-2.5 !text-xs !px-3">
+          <option value="todos">Todos</option><option value="ok">OK</option><option value="baixo">Baixo</option><option value="esgotado">Esgotado</option>
+        </select>
+        <select id="filtroCat" onchange="renderLista()" class="inp !w-auto !py-2.5 !text-xs !px-3"><option value="">Todas cats</option></select>
+      </div>
+      <div id="gridProdutos" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+    </div>
+
+    <!-- FORM CADASTRO -->
+    <div id="tab-form" class="tab-pane adm-only space-y-4 pt-3">
+      <div class="bg-slate-900/40 p-6 rounded-[2rem] border border-white/5">
+        <h3 id="formTitle" class="text-sm font-black text-emerald-400 uppercase tracking-wide mb-6">Novo Produto</h3>
+        <input type="hidden" id="editId">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+          <div class="md:col-span-2"><label class="label">Nome *</label><input type="text" id="fNome" class="inp" placeholder="Ex: Cerveja 350ml"></div>
+          <div>
+            <label class="label">Categoria</label>
+            <div class="flex gap-2">
+              <select id="fCat" class="inp flex-1"><option value="">— Sem categoria —</option></select>
+              <button onclick="adicionarCategoria()" class="px-3 rounded-xl bg-slate-800 border border-white/10 text-emerald-400 text-xs font-black flex-shrink-0">+</button>
+            </div>
+          </div>
+          <div><label class="label">Stock Inicial</label><input type="number" id="fQtd" class="inp" placeholder="0" min="0"></div>
+          <div><label class="label">Custo R$/un</label><input type="number" id="fCusto" class="inp" placeholder="0,00" step="0.01" min="0"></div>
+          <div><label class="label">Preço Venda R$/un</label><input type="number" id="fPreco" class="inp" placeholder="0,00" step="0.01" min="0"></div>
+        </div>
+        <div class="bg-amber-500/5 border border-amber-500/15 rounded-2xl p-4 mb-5">
+          <h4 class="text-[9px] font-black text-amber-400 uppercase tracking-widest mb-3">📦 Packs</h4>
+          <div class="grid grid-cols-3 gap-2 mb-3">
+            <div><label class="label !text-amber-400/80">Qtd</label><input type="number" id="pkQtd" class="inp !text-sm" placeholder="6" min="2"></div>
+            <div><label class="label !text-amber-400/80">Label</label><input type="text" id="pkLabel" class="inp !text-sm" placeholder="Fardo"></div>
+            <div><label class="label !text-amber-400/80">Preço R$</label><input type="number" id="pkPreco" class="inp !text-sm" placeholder="0,00" step="0.01"></div>
+          </div>
+          <button onclick="adicionarPack()" class="w-full bg-amber-600/20 hover:bg-amber-600/30 border border-amber-500/25 text-amber-300 py-2 rounded-xl font-black text-[10px] uppercase transition-all">+ Adicionar Pack</button>
+          <div id="packList" class="mt-3 space-y-2"></div>
+        </div>
+        <div class="flex gap-3">
+          <button onclick="salvarProduto()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 py-4 rounded-2xl font-black uppercase text-xs transition-all"><i class="fas fa-save mr-2"></i>Salvar</button>
+          <button id="btnCancelarEdit" onclick="resetForm();switchTab('lista')" class="hidden bg-slate-800 px-6 rounded-2xl font-black uppercase text-xs text-slate-400">Cancelar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AUDITORIA -->
+    <div id="tab-audit" class="tab-pane space-y-3 pt-3">
+      <div class="flex gap-2 flex-wrap">
+        <input type="text" id="auditBusca" oninput="clearTimeout(this._t);this._t=setTimeout(renderAudit,150)" class="inp !py-2.5 !text-xs flex-1 min-w-[140px]" placeholder="Filtrar por produto ou motivo...">
+        <button onclick="abrirModalAvaria()" class="adm-only px-3 rounded-xl bg-red-600/20 text-red-300 border border-red-500/25 font-black text-xs hover:bg-red-600/30 transition-all flex-shrink-0"><i class="fas fa-box-open mr-1"></i>Registrar Avaria</button>
+        <button onclick="baixarAuditoria()" class="px-3 rounded-xl bg-blue-600/20 text-blue-300 border border-blue-500/25 font-black text-xs hover:bg-blue-600/30 transition-all flex-shrink-0"><i class="fas fa-download mr-1"></i>TXT</button>
+      </div>
+      <!-- Filtros de tipo -->
+      <div class="flex gap-1.5 overflow-x-auto no-scroll pb-1">
+        <button id="auditF-todos"    onclick="setAuditFiltro('todos')"    class="audit-f-btn px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all bg-emerald-600/20 text-emerald-300 border border-emerald-500/25">Todos</button>
+        <button id="auditF-entrada"  onclick="setAuditFiltro('entrada')"  class="audit-f-btn px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all bg-slate-800 text-slate-500 border border-white/5">Entradas</button>
+        <button id="auditF-saida"    onclick="setAuditFiltro('saida')"    class="audit-f-btn px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all bg-slate-800 text-slate-500 border border-white/5">Saídas</button>
+        <button id="auditF-avaria"   onclick="setAuditFiltro('avaria')"   class="audit-f-btn px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all bg-slate-800 text-slate-500 border border-white/5">⚠️ Avarias</button>
+        <button id="auditF-venda"    onclick="setAuditFiltro('venda')"    class="audit-f-btn px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all bg-slate-800 text-slate-500 border border-white/5">Vendas</button>
+      </div>
+      <!-- KPIs de auditoria -->
+      <div id="auditKpis" class="grid grid-cols-4 gap-2"></div>
+      <div id="auditLista" class="space-y-2"></div>
+    </div>
+
+    <!-- CATEGORIAS -->
+    <div id="tab-cats" class="tab-pane adm-only space-y-4 pt-3">
+      <div class="bg-slate-900/40 p-5 rounded-[2rem] border border-white/5">
+        <h3 class="text-sm font-black text-emerald-400 uppercase tracking-wide mb-4">Gerenciar Categorias</h3>
+        <div class="flex gap-2 mb-4">
+          <input type="text" id="novaCatInput" class="inp flex-1" placeholder="Nome da nova categoria">
+          <button onclick="criarCategoria()" class="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs uppercase transition-all flex-shrink-0"><i class="fas fa-plus mr-1"></i>Criar</button>
+        </div>
+        <div id="catsLista" class="space-y-2"></div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- MODAL EDITAR -->
+<div id="modalEditar" class="modal">
+  <div class="modal-box max-w-md overflow-hidden">
+    <div class="p-5 border-b border-white/5 flex items-center justify-between">
+      <h3 class="text-sm font-black text-emerald-400 uppercase">Editar Produto</h3>
+      <button onclick="UIService.closeModal('modalEditar')" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
+    </div>
+    <div class="p-5 space-y-4 overflow-y-auto scroll" style="max-height:72vh">
+      <input type="hidden" id="meId">
+      <div><label class="label">Nome</label><input type="text" id="meNome" class="inp"></div>
+      <div class="grid grid-cols-2 gap-3">
+        <div><label class="label">Custo R$/un</label><input type="number" id="meCusto" class="inp" step="0.01"></div>
+        <div><label class="label">Preço Venda R$/un</label><input type="number" id="mePreco" class="inp" step="0.01"></div>
+      </div>
+      <div><label class="label">Categoria</label><select id="meCat" class="inp"></select></div>
+      <div class="bg-slate-900/60 border border-white/5 rounded-2xl p-4">
+        <label class="label !text-blue-400">Stock Atual</label>
+        <div class="flex items-center gap-3 mb-3">
+          <button onclick="ajusteDir(-1)" class="sk-btn sk-m w-10 h-10">−</button>
+          <input type="number" id="meQtd" class="inp text-center font-black text-lg" oninput="checkMotivoVis()">
+          <button onclick="ajusteDir(+1)" class="sk-btn sk-p w-10 h-10">+</button>
+        </div>
+        <label class="label !text-emerald-400">Entrada Rápida</label>
+        <div class="flex gap-2">
+          <input type="number" id="meEntrada" class="inp" placeholder="Qtd a adicionar" min="1">
+          <button onclick="entradaRapida()" class="bg-emerald-600 hover:bg-emerald-500 px-4 rounded-xl font-black text-xs text-white flex-shrink-0 transition-all">+ADD</button>
+        </div>
+      </div>
+      <div id="motivoWrap" class="hidden bg-amber-500/5 border border-amber-500/20 rounded-2xl p-4">
+        <label class="label !text-amber-400"><i class="fas fa-exclamation-triangle mr-1"></i>Motivo do Ajuste *</label>
+        <input type="text" id="meMotivo" class="inp" placeholder="Ex: Compra fornecedor, Quebra...">
+      </div>
+      <div class="bg-amber-500/5 border border-amber-500/15 rounded-2xl p-4">
+        <label class="label !text-amber-400 mb-2">Packs</label>
+        <div class="flex gap-2 mb-2">
+          <input type="number" id="mePkQtd" class="inp !text-xs" placeholder="Qtd">
+          <input type="number" id="mePkPreco" class="inp !text-xs" placeholder="Preço">
+          <button onclick="addPackModal()" class="bg-amber-600/20 border border-amber-500/20 px-3 rounded-xl text-amber-300 font-black text-xs flex-shrink-0 hover:bg-amber-600/30 transition-all">+</button>
+        </div>
+        <div id="mePkList" class="space-y-1.5"></div>
+      </div>
+    </div>
+    <div class="p-5 border-t border-white/5 flex gap-3">
+      <button onclick="salvarEdicao()" class="flex-1 bg-emerald-600 hover:bg-emerald-500 py-4 rounded-xl font-black uppercase text-xs transition-all">Salvar</button>
+      <button onclick="UIService.closeModal('modalEditar')" class="bg-slate-800 px-6 rounded-xl font-black uppercase text-xs text-slate-400">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RELATÓRIO -->
+<div id="modalRelatorio" class="modal">
+  <div class="modal-box max-w-sm p-0 overflow-hidden">
+    <div class="p-5 border-b border-white/5 flex items-center justify-between">
+      <div><h3 class="text-sm font-black text-emerald-400 flex items-center gap-2"><i class="fas fa-chart-bar"></i>Relatório de Estoque</h3><p id="relData" class="text-[9px] text-slate-500 font-bold mt-0.5"></p></div>
+      <div class="flex gap-2">
+        <button onclick="copiarRelatorio()" class="w-8 h-8 rounded-lg bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600/30 flex items-center justify-center"><i class="fas fa-copy text-sm"></i></button>
+        <button onclick="baixarRelatorio()" class="w-8 h-8 rounded-lg bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 flex items-center justify-center"><i class="fas fa-file-alt text-sm"></i></button>
+        <button onclick="UIService.closeModal('modalRelatorio')" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
+      </div>
+    </div>
+    <div class="overflow-y-auto scroll" style="max-height:78vh;">
+      <div class="grid grid-cols-2 gap-3 p-5 border-b border-white/5">
+        <div class="bg-slate-900/60 border border-white/5 rounded-2xl p-4 text-center"><p class="text-[8px] text-slate-500 font-black uppercase tracking-widest mb-1">Produtos</p><p id="rTotal" class="text-xl font-black text-white">0</p></div>
+        <div class="bg-slate-900/60 border border-white/5 rounded-2xl p-4 text-center"><p class="text-[8px] text-slate-500 font-black uppercase tracking-widest mb-1">Valor Stock</p><p id="rValor" class="text-xl font-black text-blue-400">R$ 0,00</p></div>
+        <div class="bg-amber-500/8 border border-amber-500/20 rounded-2xl p-4 text-center"><p class="text-[8px] text-amber-500 font-black uppercase tracking-widest mb-1">Stock Baixo</p><p id="rBaixo" class="text-xl font-black text-amber-400">0</p></div>
+        <div class="bg-red-500/8 border border-red-500/20 rounded-2xl p-4 text-center"><p class="text-[8px] text-red-500 font-black uppercase tracking-widest mb-1">Esgotados</p><p id="rEsgotado" class="text-xl font-black text-red-400">0</p></div>
+      </div>
+      <div class="p-5 border-b border-white/5"><p class="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3">Produtos Críticos</p><div id="rCriticos" class="space-y-2"></div></div>
+      <div class="p-5"><p class="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3">Todos os Produtos</p><div id="rTodos" class="space-y-1.5 max-h-64 overflow-y-auto scroll"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL AVARIA -->
+<div id="modalAvaria" class="modal">
+  <div class="modal-box max-w-md overflow-hidden">
+    <div class="p-5 border-b border-white/5 flex items-center justify-between">
+      <h3 class="text-sm font-black text-red-400 uppercase flex items-center gap-2"><i class="fas fa-box-open"></i> Registrar Avaria / Perda</h3>
+      <button onclick="UIService.closeModal('modalAvaria')" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
+    </div>
+    <div class="p-5 space-y-4">
+      <div><label class="label !text-red-400">Produto</label><select id="avProduto" class="inp"><option value="">— Selecionar produto —</option></select></div>
+      <div><label class="label !text-red-400">Quantidade Avariada</label><input type="number" id="avQtd" class="inp" placeholder="Ex: 3" min="1"></div>
+      <div><label class="label !text-red-400">Motivo da Avaria *</label><input type="text" id="avMotivo" class="inp" placeholder="Ex: Queda, vencimento, quebra..."></div>
+      <div class="bg-red-500/5 border border-red-500/15 rounded-2xl p-3">
+        <p class="text-[9px] text-red-400 font-black uppercase mb-1">⚠️ Atenção</p>
+        <p class="text-[9px] text-slate-500 font-bold">Esta operação irá baixar o stock do produto e registrar na auditoria como AVARIA. Esta ação não pode ser desfeita.</p>
+      </div>
+    </div>
+    <div class="p-5 border-t border-white/5 flex gap-3">
+      <button onclick="confirmarAvaria()" class="flex-1 bg-red-600 hover:bg-red-500 py-4 rounded-xl font-black uppercase text-xs transition-all"><i class="fas fa-check mr-2"></i>Confirmar Avaria</button>
+      <button onclick="UIService.closeModal('modalAvaria')" class="bg-slate-800 px-6 rounded-xl font-black uppercase text-xs text-slate-400">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"><div id="toastIcon" class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-black"></div><div><span id="toastMsg" class="text-[11px] font-black uppercase tracking-wide block"></span><span id="toastSub" class="text-[9px] text-slate-500 font-bold"></span></div></div>
+
+<script src="core.js"></script>
+  <script src="./services/syncService.js"></script>
+  <script src="./services/auditService.js"></script>
+  <script src="./services/syncMonitor.js"></script>
+  <script src="./services/backupService.js"></script>
+
+  <script src="./services/estoqueService.js"></script>
+<script>
+'use strict';
+let _packsForm=[],_packsEdit=[],_qtdOrig=0;
+
+async function doLogin(){const pin=document.getElementById('pinInput').value.trim();const err=document.getElementById('lockError');if(!pin)return;const ok=await AuthService.login(pin);if(ok){document.getElementById('lock').classList.add('hidden');document.getElementById('app').classList.remove('hidden');if(AuthService.isAdmin())document.body.classList.add('is-admin');const rt=document.getElementById('roleTag');if(rt){rt.textContent=AuthService.isAdmin()?'ADM':'PDV';rt.classList.remove('hidden');}init();}else{err.textContent='PIN incorreto.';err.classList.remove('hidden');document.getElementById('pinInput').value='';}}
+document.getElementById('pinInput').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+function logout(){if(confirm('Encerrar sessão?')){AuthService.logout();location.reload();}}
+
+function init(){UIService.startClock('clock');renderFiltros();renderLista();renderKPIs();renderAudit();EventBus.on('store:updated',()=>{renderFiltros();renderLista();renderKPIs();renderAudit();});}
+
+function switchTab(id){['lista','form','audit','cats'].forEach(t=>{const btn=document.getElementById('tb'+t.charAt(0).toUpperCase()+t.slice(1));const pane=document.getElementById('tab-'+t);if(btn)btn.classList.toggle('active',t===id);if(pane)pane.classList.toggle('active',t===id);});if(id==='cats')renderCatsGerenciar();}
+
+function renderFiltros(){const estoque=Store.getEstoque();const cats=[...new Set(estoque.map(p=>p.categoria||'').filter(Boolean))];const selCat=document.getElementById('filtroCat');const fCat=document.getElementById('fCat');const meCat=document.getElementById('meCat');const val=selCat?.value;if(selCat)selCat.innerHTML=`<option value="">Todas cats</option>`+cats.map(c=>`<option value="${c}">${c}</option>`).join('');if(selCat&&val)selCat.value=val;[fCat,meCat].forEach(s=>{if(!s)return;s.innerHTML=`<option value="">— Sem categoria —</option>`+cats.map(c=>`<option value="${c}">${c}</option>`).join('');});}
+
+function adicionarCategoria(){const nome=prompt('Nome da nova categoria:')?.trim();if(!nome)return;Store.mutateConfig(cfg=>{if(!Array.isArray(cfg.categorias))cfg.categorias=[];if(!cfg.categorias.includes(nome))cfg.categorias.push(nome);});renderFiltros();document.getElementById('fCat').value=nome;UIService.showToast('Categoria adicionada',nome,'success');}
+
+function renderKPIs(){const estoque=Store.getEstoque();const thr=Store.getConfig()?.alertaEstoque||3;const valor=estoque.reduce((s,p)=>s+(p.custoUn||0)*(p.qtdUn||0),0);_setText('kpiTotal',estoque.length);_setText('kpiValor',Utils.formatCurrency(valor));_setText('kpiBaixo',estoque.filter(p=>p.qtdUn>0&&p.qtdUn<=thr).length);_setText('kpiEsgotado',estoque.filter(p=>(p.qtdUn||0)<=0).length);}
+
+function renderLista(){const busca=(document.getElementById('busca')?.value||'').toLowerCase();const status=document.getElementById('filtroStatus')?.value||'todos';const catF=document.getElementById('filtroCat')?.value||'';const thr=Store.getConfig()?.alertaEstoque||3;let prods=Store.getEstoque().filter(p=>{const b=!busca||(p.nome||'').toLowerCase().includes(busca);const c=!catF||(p.categoria||'')===catF;const q=p.qtdUn||0;const s=status==='todos'||(status==='esgotado'&&q<=0)||(status==='baixo'&&q>0&&q<=thr)||(status==='ok'&&q>thr);return b&&c&&s;});const el=document.getElementById('gridProdutos');if(!el)return;if(prods.length===0){el.innerHTML=`<div class="col-span-2 flex flex-col items-center justify-center py-20 opacity-30"><i class="fas fa-box-open text-5xl mb-4 text-slate-600"></i><p class="text-[10px] font-black uppercase text-slate-600">Nenhum produto encontrado</p></div>`;return;}const isAdm=AuthService.isAdmin();el.innerHTML=prods.map(p=>{const q=p.qtdUn||0;const esg=q<=0;const bx=!esg&&q<=thr;const cls=esg?'esgotado':bx?'warning':'';const mg=p.precoUn>0?(((p.precoUn-(p.custoUn||0))/p.precoUn)*100).toFixed(0):0;return`<div class="prod-card ${cls}"><div class="flex items-start justify-between mb-2 gap-2"><div class="flex-1 min-w-0"><p class="text-[12px] font-black text-white truncate">${p.nome}</p>${p.categoria?`<span class="badge b-purple text-[8px] mt-0.5">${p.categoria}</span>`:''}</div><div class="flex items-center gap-1.5 flex-shrink-0">${esg?'<span class="badge b-red">Esgotado</span>':bx?`<span class="badge b-amber">${q} un</span>`:`<span class="badge b-green">${q} un</span>`}${isAdm?`<button onclick="abrirEdicao('${p.id}')" class="w-7 h-7 rounded-lg bg-slate-800 text-slate-400 hover:text-emerald-400 flex items-center justify-center"><i class="fas fa-edit text-[9px]"></i></button>`:''} ${isAdm?`<button onclick="excluirProduto('${p.id}')" class="w-7 h-7 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center justify-center"><i class="fas fa-trash text-[9px]"></i></button>`:''}</div></div><div class="grid grid-cols-3 gap-2 mb-3"><div class="text-center bg-slate-900/60 rounded-lg py-1.5"><p class="text-[8px] text-slate-500 font-bold uppercase">Venda</p><p class="text-[11px] font-black text-blue-400">${Utils.formatCurrency(p.precoUn)}</p></div><div class="text-center bg-slate-900/60 rounded-lg py-1.5"><p class="text-[8px] text-slate-500 font-bold uppercase">Custo</p><p class="text-[11px] font-black text-slate-300">${Utils.formatCurrency(p.custoUn||0)}</p></div><div class="text-center bg-slate-900/60 rounded-lg py-1.5"><p class="text-[8px] text-slate-500 font-bold uppercase">Margem</p><p class="text-[11px] font-black text-emerald-400">${mg}%</p></div></div>${(p.packs||[]).length>0?`<div class="flex gap-1.5 mb-3 flex-wrap">${p.packs.map(pk=>`<span class="badge b-amber text-[8px]">${pk.label||pk.qtd+'x'} ${Utils.formatCurrency(pk.preco)}</span>`).join('')}</div>`:''} ${isAdm?`<div class="flex items-center gap-2"><button onclick="ajusteRapido('${p.id}',-1)" class="sk-btn sk-m">−</button><span class="flex-1 text-center text-[11px] font-black text-white">${q} un</span><button onclick="ajusteRapido('${p.id}',+1)" class="sk-btn sk-p">+</button><span class="text-[9px] text-slate-600 font-bold">${Utils.formatCurrency((p.custoUn||0)*q)}</span></div>`:`<p class="text-[9px] text-slate-500 font-bold">${q} un · ${Utils.formatCurrency((p.custoUn||0)*q)}</p>`}</div>`;}).join('');}
+
+function ajusteRapido(id,delta){const p=Store.getEstoque().find(x=>x.id===id);if(!p)return;const nq=Math.max(0,(p.qtdUn||0)+delta);Store.mutateEstoque(est=>{const x=est.find(y=>y.id===id);if(!x)return;x.qtdUn=nq;});
+  Store.mutateAuditoria(audit=>{audit.unshift({prodId:id,prodNome:p.nome,antes:p.qtdUn,depois:nq,delta,motivo:delta>0?'Entrada manual':'Saída manual',criadoEm:new Date().toISOString(),data:Utils.today()});});UIService.showToast(p.nome,`${delta>0?'+':''}${delta} un → ${nq} un`,delta>0?'success':'warning');}
+
+function resetForm(){_packsForm=[];['editId','fNome','fQtd','fCusto','fPreco'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});const fCat=document.getElementById('fCat');if(fCat)fCat.value='';document.getElementById('packList').innerHTML='';document.getElementById('formTitle').textContent='Novo Produto';document.getElementById('btnCancelarEdit').classList.add('hidden');}
+
+function adicionarPack(){const q=parseInt(document.getElementById('pkQtd').value);const l=document.getElementById('pkLabel').value.trim()||(q+'x');const p=parseFloat(document.getElementById('pkPreco').value);if(!q||q<2||!p){UIService.showToast('Preencha qtd e preço','','error');return;}_packsForm.push({qtd:q,label:l,preco:p});renderPacksForm();document.getElementById('pkQtd').value='';document.getElementById('pkLabel').value='';document.getElementById('pkPreco').value='';}
+function renderPacksForm(){document.getElementById('packList').innerHTML=_packsForm.map((pk,i)=>`<div class="pack-row"><span class="flex-1 text-[10px] font-black text-amber-300">${pk.label} (${pk.qtd}un) — ${Utils.formatCurrency(pk.preco)}</span><button onclick="_packsForm.splice(${i},1);renderPacksForm();" class="text-red-400 text-xs"><i class="fas fa-times"></i></button></div>`).join('');}
+
+function salvarProduto(){const nome=document.getElementById('fNome').value.trim();const q=parseFloat(document.getElementById('fQtd').value)||0;const custo=parseFloat(document.getElementById('fCusto').value)||0;const preco=parseFloat(document.getElementById('fPreco').value)||0;const cat=document.getElementById('fCat').value;const eid=document.getElementById('editId').value;if(!nome){UIService.showToast('Nome obrigatório','','error');return;}Store.mutateEstoque(est=>{
+    if(eid){const idx=est.findIndex(p=>p.id===eid);if(idx>=0)est[idx]={...est[idx],nome,qtdUn:q,custoUn:custo,precoUn:preco,categoria:cat,packs:_packsForm};}
+    else{est.push({id:Utils.generateId(),nome,qtdUn:q,custoUn:custo,precoUn:preco,categoria:cat,packs:_packsForm,criadoEm:new Date().toISOString()});}
+  });
+  Store.mutateAuditoria(audit=>{audit.unshift({prodNome:nome,antes:eid?'?':0,depois:q,delta:q,motivo:eid?'Edição':'Cadastro inicial',criadoEm:new Date().toISOString(),data:Utils.today()});});UIService.showToast(eid?'Atualizado!':'Cadastrado!',nome,'success');resetForm();switchTab('lista');}
+
+function abrirEdicao(id){const p=Store.getEstoque().find(x=>x.id===id);if(!p)return;_packsEdit=[...(p.packs||[])];_qtdOrig=p.qtdUn||0;document.getElementById('meId').value=p.id;document.getElementById('meNome').value=p.nome;document.getElementById('meCusto').value=p.custoUn||0;document.getElementById('mePreco').value=p.precoUn||0;document.getElementById('meQtd').value=p.qtdUn||0;document.getElementById('meCat').value=p.categoria||'';document.getElementById('meMotivo').value='';document.getElementById('motivoWrap').classList.add('hidden');document.getElementById('meEntrada').value='';renderPacksEdit();UIService.openModal('modalEditar');}
+
+function checkMotivoVis(){const q=parseInt(document.getElementById('meQtd').value)||0;document.getElementById('motivoWrap').classList.toggle('hidden',q===_qtdOrig);}
+function ajusteDir(d){const inp=document.getElementById('meQtd');inp.value=Math.max(0,(parseInt(inp.value)||0)+d);checkMotivoVis();}
+function entradaRapida(){const e=parseInt(document.getElementById('meEntrada')?.value)||0;if(e<=0){UIService.showToast('Informe a quantidade','','error');return;}document.getElementById('meQtd').value=_qtdOrig+e;document.getElementById('motivoWrap').classList.remove('hidden');document.getElementById('meMotivo').value='Entrada de stock — '+e+' un';document.getElementById('meEntrada').value='';}
+function addPackModal(){const q=parseInt(document.getElementById('mePkQtd')?.value);const p=parseFloat(document.getElementById('mePkPreco')?.value);if(!q||q<2||!p){UIService.showToast('Preencha qtd e preço','','error');return;}_packsEdit.push({qtd:q,label:q+'x',preco:p});renderPacksEdit();document.getElementById('mePkQtd').value='';document.getElementById('mePkPreco').value='';}
+function renderPacksEdit(){const el=document.getElementById('mePkList');if(!el)return;el.innerHTML=_packsEdit.map((pk,i)=>`<div class="pack-row"><span class="flex-1 text-[10px] font-black text-amber-300">${pk.label}(${pk.qtd}un)—${Utils.formatCurrency(pk.preco)}</span><button onclick="_packsEdit.splice(${i},1);renderPacksEdit();" class="text-red-400 text-xs"><i class="fas fa-times"></i></button></div>`).join('');}
+
+function salvarEdicao(){const id=document.getElementById('meId').value;const nome=document.getElementById('meNome').value.trim();const custo=parseFloat(document.getElementById('meCusto').value)||0;const preco=parseFloat(document.getElementById('mePreco').value)||0;const nq=parseInt(document.getElementById('meQtd').value)||0;const cat=document.getElementById('meCat').value;const motivo=document.getElementById('meMotivo').value.trim();if(!nome){UIService.showToast('Nome obrigatório','','error');return;}if(nq!==_qtdOrig&&!motivo){UIService.showToast('Informe o motivo do ajuste','','error');document.getElementById('meMotivo').focus();return;}Store.mutateEstoque(est=>{const p=est.find(x=>x.id===id);if(!p)return;const ant=p.qtdUn;p.nome=nome;p.custoUn=custo;p.precoUn=preco;p.qtdUn=nq;p.categoria=cat;p.packs=_packsEdit;
+    Store.mutateAuditoria(audit=>{audit.unshift({prodId:id,prodNome:nome,antes:ant,depois:nq,delta:nq-ant,motivo:motivo||'Edição',criadoEm:new Date().toISOString(),data:Utils.today()});});
+  });UIService.closeModal('modalEditar');UIService.showToast('Produto atualizado!',nome,'success');}
+
+function excluirProduto(id){const p=Store.getEstoque().find(x=>x.id===id);if(!p||!confirm(`Excluir "${p.nome}"?`))return;Store.mutateEstoque(est=>{const idx=est.findIndex(x=>x.id===id);if(idx>=0)est.splice(idx,1);});UIService.showToast('Excluído',p.nome,'warning');}
+
+let _auditFiltro = 'todos';
+function setAuditFiltro(f){_auditFiltro=f;document.querySelectorAll('.audit-f-btn').forEach(b=>{const active=b.id==='auditF-'+f;b.className=`audit-f-btn px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all ${active?'bg-emerald-600/20 text-emerald-300 border border-emerald-500/25':'bg-slate-800 text-slate-500 border border-white/5'}`;});renderAudit();}
+
+function renderAudit(){const busca=(document.getElementById('auditBusca')?.value||'').toLowerCase();let logs=Store.getAuditEstoque();// KPIs
+const kpiEl=document.getElementById('auditKpis');if(kpiEl){const tot=logs.length,ent=logs.filter(l=>_tipoAudit(l)==='entrada').length,sai=logs.filter(l=>_tipoAudit(l)==='saida').length,ava=logs.filter(l=>_tipoAudit(l)==='avaria').length;kpiEl.innerHTML=`<div class="stat !p-3 text-center border-l-4 border-emerald-500"><p class="text-[7px] text-slate-600 uppercase font-bold">Total</p><p class="text-lg font-black text-white">${tot}</p></div><div class="stat !p-3 text-center border-l-4 border-blue-500"><p class="text-[7px] text-slate-600 uppercase font-bold">Entradas</p><p class="text-lg font-black text-blue-400">${ent}</p></div><div class="stat !p-3 text-center border-l-4 border-amber-500"><p class="text-[7px] text-slate-600 uppercase font-bold">Saídas</p><p class="text-lg font-black text-amber-400">${sai}</p></div><div class="stat !p-3 text-center border-l-4 border-red-500"><p class="text-[7px] text-slate-600 uppercase font-bold">Avarias</p><p class="text-lg font-black text-red-400">${ava}</p></div>`;}
+// Filtro tipo
+if(_auditFiltro!=='todos') logs=logs.filter(l=>_tipoAudit(l)===_auditFiltro);
+if(busca) logs=logs.filter(l=>(l.prodNome||'').toLowerCase().includes(busca)||(l.motivo||'').toLowerCase().includes(busca));
+const el=document.getElementById('auditLista');if(!el)return;if(logs.length===0){el.innerHTML=`<div class="flex flex-col items-center justify-center py-16 opacity-30"><i class="fas fa-clipboard-list text-4xl text-slate-600 mb-3"></i><p class="text-[10px] font-black uppercase text-slate-600">Sem registos</p></div>`;return;}el.innerHTML=logs.slice(0,200).map(l=>{const d=l.delta||(l.depois-l.antes);const tipo=_tipoAudit(l);const corMap={entrada:'emerald',saida:'amber',avaria:'red',venda:'blue',outro:'slate'};const cor=corMap[tipo]||'slate';const labelMap={entrada:'Entrada',saida:'Saída',avaria:'⚠️ Avaria',venda:'Venda',outro:'Ajuste'};const dt=l.criadoEm?new Date(l.criadoEm).toLocaleString('pt-BR'):(l.data||'—');return`<div class="audit-row"><div class="flex items-start justify-between gap-3"><div class="flex-1 min-w-0"><div class="flex items-center gap-2 mb-0.5"><span class="badge b-${cor==='emerald'?'green':cor==='amber'?'amber':cor==='red'?'red':cor==='blue'?'blue':'slate'} text-[7px]">${labelMap[tipo]}</span><p class="text-[11px] font-black text-white truncate">${l.prodNome||'—'}</p></div><p class="text-[9px] text-slate-500 font-bold">${l.motivo||'—'}</p><p class="text-[8px] text-slate-700 font-bold mt-0.5">${dt}</p></div><div class="text-right flex-shrink-0"><p class="text-[12px] font-black text-${cor}-400">${d>0?'+':''}${d} un</p><p class="text-[8px] text-slate-600 font-bold">${l.antes??'?'} → ${l.depois??'?'}</p></div></div></div>`;}).join('');}
+
+function _tipoAudit(l){const m=(l.motivo||'').toLowerCase();if(m.includes('avaria')||m.includes('perda')||m.includes('quebra')||l.tipo==='AVARIA') return 'avaria';if(m.includes('venda')||l.tipo==='VENDA') return 'venda';const d=l.delta||(l.depois-(l.antes||0));if(d>0) return 'entrada';if(d<0) return 'saida';return 'outro';}
+
+function abrirModalAvaria(){const sel=document.getElementById('avProduto');if(sel){const prods=Store.getEstoque().filter(p=>(p.qtdUn||0)>0);sel.innerHTML=`<option value="">— Selecionar produto —</option>`+prods.map(p=>`<option value="${p.id}">${p.nome} (${p.qtdUn} un)</option>`).join('');}document.getElementById('avQtd').value='';document.getElementById('avMotivo').value='';UIService.openModal('modalAvaria');}
+
+function confirmarAvaria(){const prodId=document.getElementById('avProduto').value;const qtd=parseInt(document.getElementById('avQtd').value)||0;const motivo=document.getElementById('avMotivo').value.trim();if(!prodId){UIService.showToast('Selecione o produto','','error');return;}if(qtd<=0){UIService.showToast('Informe a quantidade','','error');return;}if(!motivo){UIService.showToast('Informe o motivo','','error');return;}const p=Store.getEstoque().find(x=>x.id===prodId);if(!p)return;if(qtd>p.qtdUn){UIService.showToast('Quantidade maior que o stock','','error');return;}const antes=p.qtdUn;const depois=antes-qtd;Store.mutateEstoque(est=>{const x=est.find(y=>y.id===prodId);if(!x)return;x.qtdUn=depois;});Store.mutateAuditoria(audit=>{audit.unshift({prodId,prodNome:p.nome,antes,depois,delta:-qtd,motivo:`[AVARIA] ${motivo}`,tipo:'AVARIA',criadoEm:new Date().toISOString(),data:Utils.today()});});UIService.closeModal('modalAvaria');UIService.showToast('Avaria registrada!',`${p.nome}: −${qtd} un`,'warning');}
+
+function renderCatsGerenciar(){const cfg=Store.getConfig()||{};const cats=Array.isArray(cfg.categorias)?cfg.categorias:[...new Set(Store.getEstoque().map(p=>p.categoria||'').filter(Boolean))];const el=document.getElementById('catsLista');if(!el)return;if(cats.length===0){el.innerHTML=`<div class="text-center py-8 opacity-30"><i class="fas fa-tag text-3xl text-slate-600 mb-2"></i><p class="text-[10px] font-black uppercase text-slate-600">Nenhuma categoria</p></div>`;return;}el.innerHTML=cats.map(c=>{const count=Store.getEstoque().filter(p=>p.categoria===c).length;return`<div class="flex items-center justify-between bg-slate-900/60 border border-white/5 rounded-xl px-4 py-3"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-lg bg-purple-500/15 text-purple-400 flex items-center justify-center text-xs font-black">${c.charAt(0).toUpperCase()}</div><div><p class="text-[11px] font-black text-white">${c}</p><p class="text-[8px] text-slate-600 font-bold">${count} produto${count!==1?'s':''}</p></div></div><button onclick="excluirCategoria('${c}')" class="w-7 h-7 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center justify-center transition-all"><i class="fas fa-trash text-[9px]"></i></button></div>`;}).join('');}
+
+function criarCategoria(){const nome=document.getElementById('novaCatInput')?.value.trim();if(!nome){UIService.showToast('Digite o nome','','error');return;}Store.mutateConfig(cfg=>{if(!Array.isArray(cfg.categorias))cfg.categorias=[];if(cfg.categorias.includes(nome)){UIService.showToast('Categoria já existe','','warning');return;}cfg.categorias.push(nome);});document.getElementById('novaCatInput').value='';renderFiltros();renderCatsGerenciar();UIService.showToast('Categoria criada!',nome,'success');}
+
+function excluirCategoria(nome){if(!confirm(`Excluir categoria "${nome}"?\nOs produtos desta categoria ficarão sem categoria.`))return;Store.mutateConfig(cfg=>{if(Array.isArray(cfg.categorias))cfg.categorias=cfg.categorias.filter(c=>c!==nome);});Store.mutateEstoque(est=>{est.forEach(p=>{if(p.categoria===nome)p.categoria='';});});renderFiltros();renderCatsGerenciar();UIService.showToast('Categoria excluída',nome,'warning');}
+
+function baixarAuditoria(){const logs=Store.getAuditEstoque();let txt=`AUDITORIA DE ESTOQUE — ${Utils.today()}\n${'═'.repeat(50)}\n\n`;logs.forEach((l,i)=>{const d=l.delta||(l.depois-l.antes);txt+=`#${i+1} | ${l.criadoEm?new Date(l.criadoEm).toLocaleString('pt-BR'):l.data}\nProduto: ${l.prodNome||'—'}\nAjuste: ${d>0?'+':''}${d} un (${l.antes??'?'} → ${l.depois??'?'})\nMotivo: ${l.motivo||'—'}\n\n`;});Utils.downloadBlob(txt,'text/plain;charset=utf-8;',`auditoria_estoque_${Utils.todayISO()}.txt`);UIService.showToast('Auditoria exportada!','','success');}
+
+function abrirRelatorio(){const estoque=Store.getEstoque();const thr=Store.getConfig()?.alertaEstoque||3;const esgotados=estoque.filter(p=>(p.qtdUn||0)<=0);const baixos=estoque.filter(p=>p.qtdUn>0&&p.qtdUn<=thr);const valor=estoque.reduce((s,p)=>s+(p.custoUn||0)*(p.qtdUn||0),0);_setText('rTotal',estoque.length);_setText('rValor',Utils.formatCurrency(valor));_setText('rBaixo',baixos.length);_setText('rEsgotado',esgotados.length);_setText('relData',Utils.today());const criticos=[...esgotados,...baixos.filter(p=>!esgotados.find(e=>e.id===p.id))].slice(0,10);document.getElementById('rCriticos').innerHTML=criticos.map(p=>`<div class="flex items-center justify-between bg-slate-900/60 border border-white/5 rounded-xl px-3 py-2"><span class="text-[10px] font-black text-slate-300">${(p.qtdUn||0)<=0?'❌':'⚠️'} ${p.nome}</span><span class="text-[10px] font-black ${(p.qtdUn||0)<=0?'text-red-400':'text-amber-400'}">${p.qtdUn||0} un</span></div>`).join('')||'<p class="text-[9px] text-slate-600 text-center py-2 font-bold">✅ Nenhum crítico</p>';document.getElementById('rTodos').innerHTML=[...estoque].sort((a,b)=>(a.qtdUn||0)-(b.qtdUn||0)).map(p=>`<div class="flex justify-between items-center py-1.5 border-b border-white/5"><span class="text-[10px] font-bold text-slate-300 truncate flex-1">${p.nome}</span><span class="text-[10px] font-black text-slate-400 ml-2">${p.qtdUn||0} un</span><span class="text-[10px] font-black text-blue-400 ml-3 flex-shrink-0">${Utils.formatCurrency(p.precoUn)}</span></div>`).join('');UIService.openModal('modalRelatorio');}
+
+function _gerarTextoRelatorio(){const estoque=Store.getEstoque();const thr=Store.getConfig()?.alertaEstoque||3;const cfg=Store.getConfig();const nome=cfg?.nome||'CH Geladas';const sep='═'.repeat(48);let txt=`${sep}\n  ${nome} — RELATÓRIO DE ESTOQUE\n  ${Utils.today()}\n${sep}\n\n`;const valor=estoque.reduce((s,p)=>s+(p.custoUn||0)*(p.qtdUn||0),0);txt+=`Produtos: ${estoque.length} | Valor: ${Utils.formatCurrency(valor)}\nEsgotados: ${estoque.filter(p=>(p.qtdUn||0)<=0).length} | Baixo: ${estoque.filter(p=>p.qtdUn>0&&p.qtdUn<=thr).length}\n\n${'-'.repeat(48)}\n`;[...estoque].sort((a,b)=>(a.qtdUn||0)-(b.qtdUn||0)).forEach(p=>{const s=(p.qtdUn||0)<=0?'[ESGOTADO]':p.qtdUn<=thr?'[BAIXO]':'[OK]';txt+=`\n${s} ${p.nome}\n  Stock: ${p.qtdUn||0} un | Venda: ${Utils.formatCurrency(p.precoUn)} | Custo: ${Utils.formatCurrency(p.custoUn||0)}\n`;if(p.packs?.length)txt+=`  Packs: ${p.packs.map(pk=>`${pk.label} ${Utils.formatCurrency(pk.preco)}`).join(', ')}\n`;});txt+=`\n${sep}\n`;return txt;}
+function copiarRelatorio(){Utils.copyToClipboard(_gerarTextoRelatorio()).then(()=>UIService.showToast('Copiado!','','success'));}
+function baixarRelatorio(){Utils.downloadBlob(_gerarTextoRelatorio(),'text/plain;charset=utf-8;',`relatorio_estoque_${Utils.todayISO()}.txt`);UIService.showToast('Relatório salvo!','','success');}
+
+function _setText(id,val){const el=document.getElementById(id);if(el)el.textContent=val;}
+
+window.addEventListener('DOMContentLoaded',()=>{if(AuthService.isLogged()){document.getElementById('lock').classList.add('hidden');document.getElementById('app').classList.remove('hidden');if(AuthService.isAdmin())document.body.classList.add('is-admin');const rt=document.getElementById('roleTag');if(rt){rt.textContent=AuthService.isAdmin()?'ADM':'PDV';rt.classList.remove('hidden');}init();}});
+</script>
+</body>
+</html>

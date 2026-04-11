@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#04060d">
+<title>Cardápio — CH Geladas</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
+*{box-sizing:border-box;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:#060810;color:#f1f5f9;min-height:100vh;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+body{background-image:radial-gradient(ellipse at 30% 20%,rgba(249,115,22,.05) 0%,transparent 60%);}
+.modal{position:fixed;inset:0;z-index:100;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.75);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s,visibility .2s;}
+.modal.open{opacity:1;visibility:visible;pointer-events:auto;}
+.modal.open>.modal-box{transform:translateY(0);}
+.modal-box{background:#0d1117;border:1px solid rgba(255,255,255,.09);border-radius:2rem 2rem 0 0;width:100%;max-height:90vh;overflow-y:auto;transform:translateY(100%);transition:transform .3s cubic-bezier(.34,1.56,.64,1);}
+.inp{font-size:16px!important;padding:12px 14px;color:#fff;background:#1e293b;border:2px solid #334155;border-radius:.75rem;width:100%;outline:none;transition:all .2s;font-family:inherit;}
+.inp:focus{border-color:#f97316!important;box-shadow:0 0 0 4px rgba(249,115,22,.15)!important;}
+.inp::placeholder{color:#64748b;}
+.label{color:#fb923c;font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.35rem;display:block;}
+.prod-card{background:rgba(13,17,23,.95);border:1.5px solid rgba(255,255,255,.06);border-radius:1.25rem;padding:1rem;transition:all .18s;position:relative;}
+.prod-card.esgotado{opacity:.4;}
+.cat-pill{padding:.35rem .875rem;border-radius:9999px;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;border:1.5px solid rgba(255,255,255,.08);background:transparent;color:#64748b;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.cat-pill.active{background:rgba(249,115,22,.15);border-color:rgba(249,115,22,.4);color:#fb923c;}
+.cart-float{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);z-index:50;opacity:0;pointer-events:none;transition:all .3s;width:calc(100% - 2rem);max-width:400px;}
+.cart-float.show{opacity:1;pointer-events:auto;}
+#toast{min-width:200px;position:fixed;bottom:7rem;left:50%;transform:translateX(-50%) translateY(2rem);opacity:0;pointer-events:none;z-index:200;transition:opacity .2s,transform .2s;background:rgba(13,17,23,.98);border:1px solid rgba(255,255,255,.09);border-radius:1rem;padding:.75rem 1rem;display:flex;align-items:center;gap:.6rem;box-shadow:0 16px 32px rgba(0,0,0,.5);}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.scroll::-webkit-scrollbar{width:3px;}
+.scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:10px;}
+.no-scroll{-ms-overflow-style:none;scrollbar-width:none;}
+.no-scroll::-webkit-scrollbar{display:none;}
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="sticky top-0 z-40 px-4 py-3 flex items-center justify-between" style="background:rgba(6,8,16,.96);border-bottom:1px solid rgba(255,255,255,.04);">
+  <div class="flex items-center gap-3">
+    <span class="text-2xl">🍺</span>
+    <div>
+      <h1 id="nomeLoja" class="text-[11px] font-black uppercase tracking-widest text-orange-400">CH Geladas</h1>
+      <p class="text-[8px] text-slate-600 font-bold">Cardápio Digital · Delivery</p>
+    </div>
+  </div>
+  <div class="flex items-center gap-2">
+    <div id="syncDot" class="w-2 h-2 rounded-full bg-emerald-400 hidden"></div>
+    <button onclick="compartilharCardapio()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-orange-500/15 border border-orange-500/25 text-orange-300 font-black text-[9px] uppercase transition-all hover:bg-orange-500/25">
+      <i class="fas fa-share-alt text-[10px]"></i>Compartilhar
+    </button>
+    <span id="statusLoja" class="text-[9px] font-black uppercase text-emerald-400">Aberto</span>
+  </div>
+</header>
+
+<!-- BUSCA -->
+<div class="px-4 pt-3 pb-2">
+  <div class="relative">
+    <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs pointer-events-none"></i>
+    <input type="text" id="buscaProd" oninput="clearTimeout(this._t);this._t=setTimeout(renderCardapio,150)" class="inp !pl-9 !py-3" placeholder="Buscar produto...">
+  </div>
+</div>
+
+<!-- CATEGORIAS -->
+<div id="catRow" class="flex gap-2 overflow-x-auto no-scroll px-4 pb-2"></div>
+
+<!-- PRODUTOS -->
+<div id="catalogo" class="px-4 pb-32 grid grid-cols-2 gap-3 mt-2"></div>
+
+<!-- CARRINHO FLUTUANTE -->
+<div class="cart-float" id="cartFloat">
+  <button onclick="abrirCarrinho()" class="w-full bg-orange-600 hover:bg-orange-500 text-white rounded-2xl px-5 py-4 font-black text-sm uppercase shadow-2xl shadow-orange-500/30 flex items-center justify-between transition-all active:scale-98">
+    <div class="flex items-center gap-3">
+      <div class="relative">
+        <i class="fas fa-shopping-bag text-lg"></i>
+        <span id="cartBadge" class="absolute -top-2 -right-2 w-4 h-4 bg-white text-orange-600 rounded-full text-[8px] font-black flex items-center justify-center">0</span>
+      </div>
+      <div class="text-left">
+        <p id="cartQtdLabel" class="text-[9px] text-orange-200 font-bold uppercase">0 itens</p>
+        <p id="cartTotalLabel" class="text-base font-black leading-none">R$ 0,00</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <span class="text-[10px] font-black uppercase">Ver Pedido</span>
+      <i class="fas fa-chevron-up text-xs"></i>
+    </div>
+  </button>
+</div>
+
+<!-- MODAL CARRINHO / CHECKOUT -->
+<div id="modalCarrinho" class="modal">
+  <div class="modal-box p-0">
+    <div class="p-5 border-b border-white/5 flex items-center justify-between">
+      <h3 class="text-sm font-black text-orange-400 flex items-center gap-2"><i class="fas fa-shopping-bag"></i> Meu Pedido</h3>
+      <button onclick="fecharCarrinho()" class="w-8 h-8 rounded-xl bg-slate-800 text-slate-400 flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
+    </div>
+
+    <!-- Itens -->
+    <div id="cartItens" class="p-4 space-y-2 max-h-48 overflow-y-auto scroll"></div>
+
+    <div class="px-5 pb-4 border-b border-white/5">
+      <div class="flex justify-between text-[10px] font-bold text-slate-400 mb-1">
+        <span>Subtotal</span><span id="cartSubtotal">R$ 0,00</span>
+      </div>
+      <div class="flex justify-between text-sm font-black">
+        <span>Total</span><span id="cartTotal" class="text-orange-400">R$ 0,00</span>
+      </div>
+    </div>
+
+    <!-- Dados do cliente -->
+    <div class="p-5 space-y-3">
+      <p class="text-[9px] text-slate-500 font-black uppercase tracking-widest">Seus Dados</p>
+      <input type="text" id="cliNome" class="inp" placeholder="Seu nome *">
+      <input type="tel" id="cliTel" class="inp" placeholder="WhatsApp (opcional)">
+      <input type="text" id="cliEndereco" class="inp" placeholder="Endereço de entrega *">
+      <input type="text" id="cliObs" class="inp" placeholder="Observações (opcional)">
+      <div>
+        <label class="label">Forma de Pagamento</label>
+        <div class="grid grid-cols-4 gap-2">
+          <button onclick="setPgto(this,'Dinheiro')" data-pgto="Dinheiro" class="pgto-btn py-3 rounded-xl bg-emerald-600/20 border border-emerald-500/25 text-emerald-300 font-black text-[9px] uppercase flex flex-col items-center gap-1 active:scale-95 transition-all">
+            <i class="fas fa-money-bill-wave text-base"></i>Dinheiro
+          </button>
+          <button onclick="setPgto(this,'Pix')" data-pgto="Pix" class="pgto-btn py-3 rounded-xl bg-blue-600/20 border border-blue-500/25 text-blue-300 font-black text-[9px] uppercase flex flex-col items-center gap-1 active:scale-95 transition-all">
+            <i class="fas fa-qrcode text-base"></i>Pix
+          </button>
+          <button onclick="setPgto(this,'Débito')" data-pgto="Débito" class="pgto-btn py-3 rounded-xl bg-purple-600/20 border border-purple-500/25 text-purple-300 font-black text-[9px] uppercase flex flex-col items-center gap-1 active:scale-95 transition-all">
+            <i class="fas fa-credit-card text-base"></i>Débito
+          </button>
+          <button onclick="setPgto(this,'Crédito')" data-pgto="Crédito" class="pgto-btn py-3 rounded-xl bg-amber-600/20 border border-amber-500/25 text-amber-300 font-black text-[9px] uppercase flex flex-col items-center gap-1 active:scale-95 transition-all">
+            <i class="fas fa-credit-card text-base"></i>Crédito
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-5 pt-0">
+      <button onclick="enviarPedido()" class="w-full bg-orange-600 hover:bg-orange-500 text-white py-4 rounded-2xl font-black uppercase text-sm tracking-widest transition-all active:scale-98 flex items-center justify-center gap-2">
+        <i class="fas fa-paper-plane"></i>Enviar Pedido
+      </button>
+      <p class="text-[8px] text-slate-600 text-center mt-2 font-bold">O pedido será enviado ao estabelecimento</p>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL SUCESSO -->
+<div id="modalSucesso" class="modal" style="align-items:center;">
+  <div class="modal-box" style="border-radius:2rem;max-width:340px;margin:1rem;transform:none;max-height:none;">
+    <div class="p-8 text-center">
+      <div class="w-20 h-20 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-4 text-4xl">✓</div>
+      <h2 class="text-xl font-black text-white mb-2">Pedido Enviado!</h2>
+      <p id="sucessoMsg" class="text-[11px] text-slate-400 font-bold mb-6"></p>
+      <div class="bg-slate-900/60 border border-white/5 rounded-2xl p-4 mb-6 text-left space-y-2">
+        <div class="flex justify-between text-[10px] font-bold"><span class="text-slate-400">Número do Pedido</span><span id="sucessoNum" class="text-orange-400 font-black"></span></div>
+        <div class="flex justify-between text-[10px] font-bold"><span class="text-slate-400">Total</span><span id="sucessoTotal" class="text-white"></span></div>
+        <div class="flex justify-between text-[10px] font-bold"><span class="text-slate-400">Pagamento</span><span id="sucessoPgto" class="text-white"></span></div>
+      </div>
+      <button onclick="location.reload()" class="w-full bg-orange-600 hover:bg-orange-500 text-white py-3.5 rounded-2xl font-black uppercase text-xs transition-all">
+        Fazer Outro Pedido
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL COMPARTILHAR -->
+<div id="modalCompartilhar" class="modal" style="align-items:center;">
+  <div class="modal-box" style="border-radius:2rem;max-width:360px;margin:1rem;transform:none;max-height:none;">
+    <div class="p-5 border-b border-white/5 flex items-center justify-between">
+      <h3 class="text-sm font-black text-orange-400 flex items-center gap-2"><i class="fas fa-share-alt"></i> Compartilhar Cardápio</h3>
+      <button onclick="UIService.closeModal('modalCompartilhar')" class="w-8 h-8 rounded-xl bg-slate-800 text-slate-400 flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
+    </div>
+    <div class="p-5 space-y-4">
+      <!-- Link gerado -->
+      <div>
+        <p class="text-[8px] text-slate-500 font-black uppercase tracking-widest mb-2">Link do Cardápio</p>
+        <div class="flex gap-2">
+          <input type="text" id="shareLink" readonly class="inp !py-2.5 !text-[10px] flex-1 bg-slate-950 cursor-pointer" onclick="this.select()">
+          <button onclick="copiarLink()" class="px-3 rounded-xl bg-orange-600/20 text-orange-300 border border-orange-500/25 font-black text-xs hover:bg-orange-600/30 transition-all flex-shrink-0"><i class="fas fa-copy"></i></button>
+        </div>
+      </div>
+      <!-- Geolocalização -->
+      <div class="bg-slate-900/60 border border-white/5 rounded-2xl p-4">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <p class="text-[9px] font-black text-white">📍 Incluir Localização</p>
+            <p class="text-[8px] text-slate-500 font-bold mt-0.5">Clientes veem a distância até você</p>
+          </div>
+          <button id="btnGeoToggle" onclick="toggleGeo()" class="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 font-black text-[9px] uppercase border border-white/5 hover:bg-slate-700 transition-all">Ativar</button>
+        </div>
+        <div id="geoStatus" class="text-[8px] text-slate-600 font-bold"></div>
+      </div>
+      <!-- QR Code placeholder -->
+      <div class="bg-slate-900/60 border border-white/5 rounded-2xl p-4 text-center">
+        <div id="qrCodeArea" class="flex flex-col items-center gap-2">
+          <div class="w-24 h-24 bg-slate-800 rounded-xl flex items-center justify-center">
+            <i class="fas fa-qrcode text-4xl text-slate-600"></i>
+          </div>
+          <p class="text-[8px] text-slate-600 font-bold">QR Code disponível ao compartilhar</p>
+        </div>
+      </div>
+      <!-- Botões de compartilhar -->
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="shareViaWhatsApp()" class="py-3 rounded-xl bg-emerald-600/20 border border-emerald-500/25 text-emerald-300 font-black text-[10px] uppercase flex items-center justify-center gap-2 hover:bg-emerald-600/30 transition-all">
+          <i class="fab fa-whatsapp text-base"></i>WhatsApp
+        </button>
+        <button onclick="shareNativo()" class="py-3 rounded-xl bg-blue-600/20 border border-blue-500/25 text-blue-300 font-black text-[10px] uppercase flex items-center justify-center gap-2 hover:bg-blue-600/30 transition-all">
+          <i class="fas fa-share text-base"></i>Compartilhar
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast">
+  <span id="toastMsg" class="text-[11px] font-black uppercase tracking-wide"></span>
+</div>
+
+<script src="core.js"></script>
+  <script src="./services/syncService.js"></script>
+  <script src="./services/auditService.js"></script>
+  <script src="./services/syncMonitor.js"></script>
+  <script src="./services/backupService.js"></script>
+
+<script>
+'use strict';
+
+let _cat    = 'TODOS';
+let _cart   = [];
+let _pgto   = 'Dinheiro';
+
+/* ══ INIT ══ */
+window.addEventListener('DOMContentLoaded', () => {
+  // Tenta carregar dados do Firebase silenciosamente
+  FirebaseService.init().then(ok => {
+    if (ok) {
+      document.getElementById('syncDot')?.classList.remove('hidden');
+      FirebaseService.subscribeRealtime && FirebaseService.subscribeRealtime();
+      setTimeout(() => SyncService.pull && SyncService.pull(['estoque','config']), 500);
+    }
+  });
+  // Aguarda um pouco e renderiza
+  setTimeout(renderTudo, 600);
+  // Verifica params de geolocalização
+  verificarGeoParams();
+  // Ouve atualizações
+  EventBus.on('store:updated', renderTudo);
+  // Seleciona Dinheiro por padrão
+  document.querySelector('[data-pgto="Dinheiro"]')?.classList.add('ring-2','ring-orange-400');
+});
+
+function renderTudo() {
+  const cfg = Store.getConfig();
+  if (cfg?.nome) document.getElementById('nomeLoja').textContent = cfg.nome;
+  renderCats();
+  renderCardapio();
+}
+
+/* ══ CATEGORIAS ══ */
+function renderCats() {
+  const cats = [...new Set(Store.getEstoque().map(p=>p.categoria||'').filter(Boolean))];
+  const row  = document.getElementById('catRow');
+  if (!row) return;
+  row.innerHTML = ['TODOS',...cats].map(c =>
+    `<button class="cat-pill ${c===_cat?'active':''}" onclick="setCat('${c}')">${c}</button>`
+  ).join('');
+}
+function setCat(c) { _cat=c; renderCats(); renderCardapio(); }
+
+/* ══ CARDÁPIO ══ */
+function renderCardapio() {
+  const busca = (document.getElementById('buscaProd')?.value||'').toLowerCase();
+  const el    = document.getElementById('catalogo');
+  if (!el) return;
+  const est = Store.getEstoque();
+  let prods = est.filter(p => {
+    const mb = !busca || (p.nome||'').toLowerCase().includes(busca);
+    const mc = _cat==='TODOS' || (p.categoria||'')===_cat;
+    return mb && mc && (p.qtdUn||0) > 0; // só mostra disponíveis
+  });
+  if (prods.length === 0) {
+    el.innerHTML = `<div class="col-span-2 flex flex-col items-center justify-center py-24 opacity-30">
+      <i class="fas fa-box-open text-5xl text-slate-600 mb-4"></i>
+      <p class="text-[10px] font-black uppercase tracking-widest text-slate-600">${est.length===0?'Cardápio em breve':'Nenhum produto encontrado'}</p>
+    </div>`; return;
+  }
+  el.innerHTML = prods.map(p => {
+    const qtdCarrinho = _cart.filter(i=>i.prodId===p.id).reduce((s,i)=>s+i.qtd,0);
+    return `<div class="prod-card">
+      <div class="mb-2">
+        <p class="text-[12px] font-black text-white leading-tight mb-1">${p.nome}</p>
+        ${p.categoria?`<span class="text-[8px] text-slate-600 font-bold uppercase">${p.categoria}</span>`:''}
+      </div>
+      <p class="text-base font-black text-orange-400 mb-3">${Utils.formatCurrency(p.precoUn||0)}</p>
+      ${qtdCarrinho>0
+        ? `<div class="flex items-center gap-2 justify-between">
+            <button onclick="removerDoCarrinho('${p.id}')" class="w-9 h-9 rounded-xl bg-red-500/15 text-red-400 font-black text-lg flex items-center justify-center active:scale-90 transition-all">−</button>
+            <span class="font-black text-white text-sm">${qtdCarrinho}</span>
+            <button onclick="addCarrinho('${p.id}')" class="w-9 h-9 rounded-xl bg-orange-600/20 text-orange-300 font-black text-lg flex items-center justify-center active:scale-90 transition-all">+</button>
+          </div>`
+        : `<button onclick="addCarrinho('${p.id}')" class="w-full py-2.5 rounded-xl bg-orange-600/20 border border-orange-500/25 text-orange-300 font-black text-[10px] uppercase transition-all active:scale-95 hover:bg-orange-600/35">
+            <i class="fas fa-plus mr-1"></i>Adicionar
+          </button>`
+      }
+    </div>`;
+  }).join('');
+}
+
+/* ══ CARRINHO ══ */
+function addCarrinho(prodId) {
+  const prod = Store.getEstoque().find(p=>p.id===prodId);
+  if (!prod) return;
+  const idx = _cart.findIndex(i=>i.prodId===prodId);
+  if (idx>=0) _cart[idx].qtd++;
+  else _cart.push({ prodId, nome:prod.nome, preco:prod.precoUn||0, qtd:1 });
+  atualizarCartUI();
+  renderCardapio();
+  toast(`${prod.nome} adicionado`);
+}
+
+function removerDoCarrinho(prodId) {
+  const idx = _cart.findIndex(i=>i.prodId===prodId);
+  if (idx<0) return;
+  if (_cart[idx].qtd > 1) _cart[idx].qtd--;
+  else _cart.splice(idx,1);
+  atualizarCartUI();
+  renderCardapio();
+}
+
+function getTotal() { return _cart.reduce((s,i)=>s+i.preco*i.qtd,0); }
+function getCount() { return _cart.reduce((s,i)=>s+i.qtd,0); }
+
+function atualizarCartUI() {
+  const count = getCount();
+  const total = getTotal();
+  const float = document.getElementById('cartFloat');
+  if (float) float.classList.toggle('show', count>0);
+  _setText('cartBadge', count);
+  _setText('cartQtdLabel', `${count} ${count===1?'item':'itens'}`);
+  _setText('cartTotalLabel', Utils.formatCurrency(total));
+  _setText('cartSubtotal', Utils.formatCurrency(total));
+  _setText('cartTotal', Utils.formatCurrency(total));
+  renderCartItens();
+}
+
+function renderCartItens() {
+  const el = document.getElementById('cartItens');
+  if (!el) return;
+  el.innerHTML = _cart.map((i,idx) => `
+    <div class="flex items-center gap-3 bg-slate-900/60 border border-white/5 rounded-xl px-3 py-2.5">
+      <div class="flex-1 min-w-0">
+        <p class="text-[11px] font-black text-white">${i.nome}</p>
+        <p class="text-[9px] text-slate-500 font-bold">${Utils.formatCurrency(i.preco)} × ${i.qtd}</p>
+      </div>
+      <div class="flex items-center gap-1.5 flex-shrink-0">
+        <button onclick="ajustarQtd(${idx},-1)" class="w-7 h-7 rounded-lg bg-slate-800 text-red-400 font-black flex items-center justify-center text-sm active:scale-90">−</button>
+        <span class="w-5 text-center font-black text-white text-sm">${i.qtd}</span>
+        <button onclick="ajustarQtd(${idx},1)" class="w-7 h-7 rounded-lg bg-slate-800 text-emerald-400 font-black flex items-center justify-center text-sm active:scale-90">+</button>
+      </div>
+      <span class="text-[11px] font-black text-orange-400 flex-shrink-0">${Utils.formatCurrency(i.preco*i.qtd)}</span>
+    </div>`).join('') || '<p class="text-[9px] text-slate-600 text-center py-4 font-bold">Carrinho vazio</p>';
+}
+
+function ajustarQtd(idx, delta) {
+  if (!_cart[idx]) return;
+  _cart[idx].qtd += delta;
+  if (_cart[idx].qtd <= 0) _cart.splice(idx,1);
+  atualizarCartUI();
+  renderCardapio();
+}
+
+function abrirCarrinho()  { UIService.openModal('modalCarrinho'); renderCartItens(); }
+function fecharCarrinho() { UIService.closeModal('modalCarrinho'); }
+
+/* ══ PAGAMENTO ══ */
+function setPgto(btn, forma) {
+  _pgto = forma;
+  document.querySelectorAll('.pgto-btn').forEach(b => b.classList.remove('ring-2','ring-orange-400'));
+  btn.classList.add('ring-2','ring-orange-400');
+}
+
+/* ══ ENVIAR PEDIDO ══ */
+function enviarPedido() {
+  if (_cart.length === 0) { toast('Carrinho vazio'); return; }
+  const nome     = document.getElementById('cliNome')?.value.trim();
+  const endereco = document.getElementById('cliEndereco')?.value.trim();
+  if (!nome)     { toast('Informe seu nome'); return; }
+  if (!endereco) { toast('Informe o endereço'); return; }
+  const tel = document.getElementById('cliTel')?.value.trim();
+  const obs = document.getElementById('cliObs')?.value.trim();
+  const total   = getTotal();
+  const numPedido = '#' + Date.now().toString().slice(-5);
+
+  const pedido = {
+    id:        Utils.generateId(),
+    cliente:   nome,
+    telefone:  tel,
+    endereco,
+    obs,
+    itens:     _cart.map(i=>({ prodId:i.prodId, nome:i.nome, preco:i.preco, custo:0, qtd:i.qtd })),
+    total,
+    subtotal:  total,
+    formaPgto: _pgto,
+    status:    'Novo',
+    origem:    'CARDAPIO',
+    numPedido,
+    criadoEm:  new Date().toISOString(),
+    dataCurta: Utils.todayISO(),
+    hora:      Utils.nowTime(),
+  };
+
+  // Salvar no Store
+  Store.mutatePedidos(pedidos => { pedidos.unshift(pedido); });
+
+  // Notificação Telegram
+  const itensStr = _cart.map(i=>`  · ${i.nome} x${i.qtd}  ${Utils.formatCurrency(i.preco*i.qtd)}`).join('\n');
+  TelegramService.enviar(
+    `🛵 <b>NOVO PEDIDO — CH Geladas</b>\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `🔖 <b>Pedido:</b> ${numPedido}\n` +
+    `👤 <b>Cliente:</b> ${nome}\n` +
+    `📍 <b>Endereço:</b> ${endereco}\n` +
+    `${tel?`📞 <b>Tel:</b> ${tel}\n`:''}` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `${itensStr}\n` +
+    `━━━━━━━━━━━━━━━━━━\n` +
+    `💰 <b>Total:</b> ${Utils.formatCurrency(total)}\n` +
+    `💳 <b>Pgto:</b> ${_pgto}\n` +
+    `${obs?`📝 <b>Obs:</b> ${obs}\n`:''}` +
+    `🕐 <b>Hora:</b> ${Utils.nowTime()}`
+  );
+
+  UIService.closeModal('modalCarrinho');
+  _setText('sucessoMsg', `${nome}, seu pedido foi recebido!`);
+  _setText('sucessoNum', numPedido);
+  _setText('sucessoTotal', Utils.formatCurrency(total));
+  _setText('sucessoPgto', _pgto);
+  document.getElementById('modalSucesso').style.alignItems = 'center';
+  UIService.openModal('modalSucesso');
+}
+
+/* ══ COMPARTILHAR ══ */
+let _geoAtiva = false;
+let _geoCoords = null;
+
+function compartilharCardapio() {
+  _gerarLinkShare(false);
+  UIService.openModal('modalCompartilhar');
+}
+
+function _gerarLinkShare(comGeo) {
+  const url = new URL(window.location.href);
+  url.search = ''; // limpa params existentes
+  if (comGeo && _geoCoords) {
+    url.searchParams.set('lat', _geoCoords.lat.toFixed(6));
+    url.searchParams.set('lng', _geoCoords.lng.toFixed(6));
+    url.searchParams.set('loja', Store.getConfig()?.nome || 'CH Geladas');
+  }
+  const link = url.toString();
+  const inp = document.getElementById('shareLink');
+  if (inp) inp.value = link;
+  return link;
+}
+
+function toggleGeo() {
+  const btn = document.getElementById('btnGeoToggle');
+  const status = document.getElementById('geoStatus');
+  if (_geoAtiva) {
+    _geoAtiva = false; _geoCoords = null;
+    if (btn) { btn.textContent = 'Ativar'; btn.className = 'px-3 py-1.5 rounded-lg bg-slate-800 text-slate-400 font-black text-[9px] uppercase border border-white/5 hover:bg-slate-700 transition-all'; }
+    if (status) status.textContent = '';
+    _gerarLinkShare(false);
+    return;
+  }
+  if (!navigator.geolocation) { toast('Geolocalização não suportada'); return; }
+  if (status) status.textContent = '📡 Obtendo localização...';
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      _geoCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      _geoAtiva = true;
+      if (btn) { btn.textContent = '✓ Ativo'; btn.className = 'px-3 py-1.5 rounded-lg bg-emerald-600/20 text-emerald-300 font-black text-[9px] uppercase border border-emerald-500/25 transition-all'; }
+      if (status) status.innerHTML = `<span class="text-emerald-400">📍 ${_geoCoords.lat.toFixed(4)}, ${_geoCoords.lng.toFixed(4)}</span>`;
+      _gerarLinkShare(true);
+    },
+    err => {
+      if (status) status.innerHTML = '<span class="text-red-400">⚠️ Permissão negada ou indisponível</span>';
+    },
+    { enableHighAccuracy: true, timeout: 8000 }
+  );
+}
+
+function copiarLink() {
+  const link = document.getElementById('shareLink')?.value;
+  if (!link) return;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(link).then(() => toast('Link copiado!'));
+  } else {
+    document.getElementById('shareLink').select();
+    document.execCommand('copy');
+    toast('Link copiado!');
+  }
+}
+
+function shareViaWhatsApp() {
+  const link = document.getElementById('shareLink')?.value || window.location.href;
+  const nome = Store.getConfig()?.nome || 'CH Geladas';
+  const msg = encodeURIComponent(`🍺 *${nome}* — Cardápio Digital\n\n${link}`);
+  window.open(`https://wa.me/?text=${msg}`, '_blank');
+}
+
+function shareNativo() {
+  const link = document.getElementById('shareLink')?.value || window.location.href;
+  const nome = Store.getConfig()?.nome || 'CH Geladas';
+  if (navigator.share) {
+    navigator.share({ title: nome, text: `${nome} — Cardápio Digital`, url: link })
+      .catch(() => {});
+  } else {
+    copiarLink();
+    toast('Link copiado para a área de transferência');
+  }
+}
+
+/* ══ LOCALIZAÇÃO DO CLIENTE (quando abrir via link com ?lat&lng) ══ */
+function verificarGeoParams() {
+  const params = new URLSearchParams(window.location.search);
+  const lat = parseFloat(params.get('lat'));
+  const lng = parseFloat(params.get('lng'));
+  const nomeLoja = params.get('loja');
+  if (!lat || !lng) return;
+  // Mostra banner com link para o mapa
+  const banner = document.createElement('div');
+  banner.style.cssText = 'position:fixed;bottom:7rem;left:50%;transform:translateX(-50%);z-index:60;width:calc(100% - 2rem);max-width:400px;';
+  banner.innerHTML = `<div style="background:rgba(13,17,23,.97);border:1px solid rgba(249,115,22,.25);border-radius:1.25rem;padding:.875rem 1rem;display:flex;align-items:center;gap:.875rem;">
+    <span style="font-size:1.5rem;">📍</span>
+    <div style="flex:1;min-width:0;">
+      <p style="font-size:10px;font-weight:900;color:#fb923c;text-transform:uppercase;">${nomeLoja||'Localização da loja'}</p>
+      <p style="font-size:8px;color:#64748b;font-weight:700;">Toque para ver no mapa</p>
+    </div>
+    <a href="https://www.google.com/maps?q=${lat},${lng}" target="_blank"
+       style="background:rgba(249,115,22,.2);border:1px solid rgba(249,115,22,.3);color:#fb923c;border-radius:.75rem;padding:.4rem .75rem;font-size:9px;font-weight:900;text-transform:uppercase;text-decoration:none;white-space:nowrap;">
+      Ver Mapa
+    </a>
+  </div>`;
+  document.body.appendChild(banner);
+  // Remove após 12 segundos
+  setTimeout(() => banner.remove(), 12000);
+}
+
+/* ══ UTILS ══ */
+function _setText(id,v) { const e=document.getElementById(id); if(e) e.textContent=v; }
+let _toastT;
+function toast(msg) {
+  const el = document.getElementById('toast');
+  const m  = document.getElementById('toastMsg');
+  if (!el||!m) return;
+  m.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(_toastT);
+  _toastT = setTimeout(()=>el.classList.remove('show'),2000);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#04060d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CH Geladas">
+<title>Delivery — CH Geladas</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
+:root{--bg:#060810;--border:rgba(255,255,255,0.06);}
+*{box-sizing:border-box;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:#f1f5f9;min-height:100vh;user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+body{background-image:radial-gradient(ellipse at 70% 30%,rgba(249,115,22,.04) 0%,transparent 50%);}
+
+#lock{position:fixed;inset:0;z-index:9999;background:radial-gradient(ellipse at 50% 40%,#0f1a2e 0%,#060810 70%);display:flex;align-items:center;justify-content:center;}
+#lock.hidden{display:none;}
+
+.modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(0,0,0,.8);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s,visibility .2s;}
+.modal.open{opacity:1;visibility:visible;pointer-events:auto;}
+.modal.open>.modal-box{animation:mIn .22s cubic-bezier(.34,1.56,.64,1) forwards;}
+@keyframes mIn{from{opacity:0;transform:scale(.93) translateY(8px);}to{opacity:1;transform:scale(1) translateY(0);}}
+.modal-box{background:rgba(13,17,23,.98);border:1px solid rgba(255,255,255,.09);border-radius:2rem;width:100%;box-shadow:0 32px 64px rgba(0,0,0,.6);}
+
+.inp{font-size:16px!important;padding:12px 14px;color:#fff;background:#1e293b;border:2px solid #334155;border-radius:.75rem;width:100%;outline:none;transition:all .2s;font-family:inherit;}
+.inp:focus{border-color:#f97316!important;box-shadow:0 0 0 4px rgba(249,115,22,.2)!important;background:#0f172a;}
+.inp::placeholder{color:#64748b;}
+select.inp{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2364748b' viewBox='0 0 16 16'%3E%3Cpath d='M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;}
+.label{color:#fb923c;font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.35rem;display:block;}
+
+/* STATUS PIPELINE */
+.status-btn{padding:.35rem .875rem;border-radius:9999px;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;border:1.5px solid rgba(255,255,255,.08);background:transparent;color:#64748b;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.status-btn.active{background:rgba(249,115,22,.15);border-color:rgba(249,115,22,.4);color:#fb923c;}
+
+/* PEDIDO CARD */
+.pedido-card{background:rgba(13,17,23,.85);border:1px solid rgba(255,255,255,.07);border-radius:1.5rem;padding:1.25rem;transition:all .2s;position:relative;overflow:hidden;}
+.pedido-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:4px 0 0 4px;}
+.pedido-card.novo::before{background:#3b82f6;}
+.pedido-card.preparando::before{background:#f59e0b;}
+.pedido-card.caminho::before{background:#f97316;}
+.pedido-card.entregue::before{background:#10b981;}
+.pedido-card.cancelado::before{background:#6b7280;}
+.pedido-card:hover{transform:translateY(-1px);border-color:rgba(255,255,255,.12);}
+
+.badge{display:inline-flex;align-items:center;border-radius:9999px;font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:.2rem .55rem;}
+.b-blue{background:rgba(59,130,246,.15);color:#60a5fa;}
+.b-amber{background:rgba(245,158,11,.15);color:#fbbf24;}
+.b-orange{background:rgba(249,115,22,.15);color:#fb923c;}
+.b-green{background:rgba(16,185,129,.15);color:#34d399;}
+.b-slate{background:rgba(100,116,139,.15);color:#94a3b8;}
+.b-red{background:rgba(239,68,68,.15);color:#f87171;}
+
+.scroll::-webkit-scrollbar{width:3px;}
+.scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:10px;}
+.no-scroll{-ms-overflow-style:none;scrollbar-width:none;}
+.no-scroll::-webkit-scrollbar{display:none;}
+
+#toast{min-width:220px;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(4rem);opacity:0;pointer-events:none;z-index:200;transition:opacity .25s,transform .25s;background:rgba(13,17,23,.98);border:1px solid rgba(255,255,255,.09);border-radius:1.25rem;padding:1rem 1.25rem;display:flex;align-items:center;gap:.75rem;box-shadow:0 24px 48px rgba(0,0,0,.5);}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+
+<!-- LOCK -->
+<div id="lock">
+  <div style="background:rgba(13,17,23,.95);border:1px solid rgba(255,255,255,.08);border-radius:2.5rem;padding:2.5rem;width:100%;max-width:360px;margin:0 1rem;text-align:center;box-shadow:0 40px 80px rgba(0,0,0,.8);">
+    <div class="text-5xl mb-4">🛵</div>
+    <h1 class="text-2xl font-black mb-1 uppercase tracking-tight">CH <span class="text-orange-400">GELADAS</span></h1>
+    <p class="text-[9px] text-slate-600 font-bold uppercase tracking-widest mb-8">Módulo de Delivery</p>
+    <input type="password" id="pinInput" autocomplete="current-password" inputmode="numeric"
+      class="w-full bg-slate-950 border-2 border-slate-800 focus:border-orange-500 p-5 rounded-2xl text-center text-2xl outline-none text-white tracking-[.4em] transition-all font-mono mb-4"
+      placeholder="· · · · ·" maxlength="8">
+    <div id="lockError" class="hidden text-[10px] text-red-400 font-bold mb-3"></div>
+    <button onclick="doLogin()" class="w-full bg-orange-700 hover:bg-orange-600 py-4 rounded-xl font-black uppercase text-xs tracking-widest transition-all">
+      <i class="fas fa-unlock-alt mr-2"></i>Entrar
+    </button>
+    <div class="mt-6"><a href="index.html" class="text-[9px] text-slate-700 hover:text-slate-500 font-bold uppercase tracking-widest transition-colors">← Hub Principal</a></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden flex flex-col min-h-screen">
+
+  <header class="sticky top-0 z-40 px-4 py-3 flex justify-between items-center" style="background:rgba(6,8,16,.96);border-bottom:1px solid rgba(255,255,255,.04);">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">🛵</span>
+      <div>
+        <h1 class="text-[10px] font-black uppercase tracking-widest text-orange-400">Delivery</h1>
+        <p id="clock" class="text-[9px] font-mono text-slate-600 mt-0.5">00:00:00</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="abrirRelatorio()" class="w-8 h-8 rounded-lg bg-slate-900 border border-white/5 flex items-center justify-center text-slate-500 hover:text-orange-400 transition-all">
+        <i class="fas fa-chart-bar text-xs"></i>
+      </button>
+      <a href="cardapio.html" target="_blank" class="bg-slate-800 hover:bg-slate-700 border border-white/10 text-slate-300 px-3 py-2 rounded-xl font-black text-[9px] uppercase tracking-wide transition-all flex items-center gap-1.5">
+        <i class="fas fa-qrcode text-[9px]"></i>Cardápio
+      </a>
+      <button onclick="abrirFormNovo()" class="bg-orange-700 hover:bg-orange-600 text-white px-3 py-2 rounded-xl font-black text-[9px] uppercase tracking-wide transition-all flex items-center gap-1.5">
+        <i class="fas fa-plus text-[9px]"></i>Pedido
+      </button>
+      <button onclick="logout()" class="w-8 h-8 rounded-lg bg-slate-900 border border-white/5 flex items-center justify-center text-slate-500 hover:text-red-400 transition-all">
+        <i class="fas fa-power-off text-xs"></i>
+      </button>
+    </div>
+  </header>
+
+  <main class="flex-1 p-3 pb-28 space-y-4 max-w-4xl mx-auto w-full">
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-4 gap-2">
+      <div class="bg-blue-500/8 border border-blue-500/15 rounded-2xl p-3 text-center">
+        <p class="text-[7px] text-blue-400 font-black uppercase tracking-wider mb-1">Novos</p>
+        <p id="kpiNovos" class="text-xl font-black text-blue-300">0</p>
+      </div>
+      <div class="bg-amber-500/8 border border-amber-500/15 rounded-2xl p-3 text-center">
+        <p class="text-[7px] text-amber-400 font-black uppercase tracking-wider mb-1">Prep.</p>
+        <p id="kpiPrep" class="text-xl font-black text-amber-300">0</p>
+      </div>
+      <div class="bg-orange-500/8 border border-orange-500/15 rounded-2xl p-3 text-center">
+        <p class="text-[7px] text-orange-400 font-black uppercase tracking-wider mb-1">Caminho</p>
+        <p id="kpiCaminho" class="text-xl font-black text-orange-300">0</p>
+      </div>
+      <div class="bg-emerald-500/8 border border-emerald-500/15 rounded-2xl p-3 text-center">
+        <p class="text-[7px] text-emerald-400 font-black uppercase tracking-wider mb-1">Hoje</p>
+        <p id="kpiEntregues" class="text-xl font-black text-emerald-300">0</p>
+      </div>
+    </div>
+
+    <!-- FILTRO STATUS -->
+    <div class="flex gap-2 overflow-x-auto no-scroll pb-1">
+      <button class="status-btn active" data-st="TODOS"      onclick="setStatus('TODOS',this)">Todos</button>
+      <button class="status-btn"        data-st="Novo"       onclick="setStatus('Novo',this)">🆕 Novos</button>
+      <button class="status-btn"        data-st="Preparando" onclick="setStatus('Preparando',this)">⏳ Preparando</button>
+      <button class="status-btn"        data-st="A Caminho"  onclick="setStatus('A Caminho',this)">🛵 A Caminho</button>
+      <button class="status-btn"        data-st="Entregue"   onclick="setStatus('Entregue',this)">✅ Entregues</button>
+      <button class="status-btn"        data-st="Cancelado"  onclick="setStatus('Cancelado',this)">❌ Cancelados</button>
+    </div>
+
+    <!-- LISTA DE PEDIDOS -->
+    <div id="listaPedidos" class="space-y-3"></div>
+
+  </main>
+</div>
+
+<!-- ══════ MODAL NOVO PEDIDO ══════ -->
+<div id="modalNovoPedido" class="modal">
+  <div class="modal-box max-w-md overflow-hidden">
+    <div class="p-5 border-b border-white/5 flex items-center justify-between">
+      <h3 id="formTitulo" class="text-sm font-black text-orange-400 flex items-center gap-2"><i class="fas fa-plus-circle"></i> Novo Pedido</h3>
+      <button onclick="UIService.closeModal('modalNovoPedido')" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
+    </div>
+    <div class="p-5 space-y-4 overflow-y-auto scroll" style="max-height:72vh;">
+      <input type="hidden" id="fPedidoId">
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="col-span-2">
+          <label class="label">Cliente <span class="text-red-400">*</span></label>
+          <input type="text" id="fCliente" class="inp" placeholder="Nome do cliente">
+        </div>
+        <div class="col-span-2">
+          <label class="label">Endereço</label>
+          <input type="text" id="fEndereco" class="inp" placeholder="Rua, número, bairro...">
+        </div>
+        <div>
+          <label class="label">Telefone</label>
+          <input type="tel" id="fTelefone" class="inp" placeholder="(71) 9 9999-9999">
+        </div>
+        <div>
+          <label class="label">Entregador</label>
+          <input type="text" id="fEntregador" class="inp" placeholder="Nome do motoboy" list="entregadoresList">
+          <datalist id="entregadoresList"></datalist>
+        </div>
+      </div>
+
+      <!-- Itens do pedido -->
+      <div class="bg-orange-500/5 border border-orange-500/15 rounded-2xl p-4">
+        <label class="label mb-3">Itens do Pedido</label>
+        <div class="flex gap-2 mb-2">
+          <select id="fItemProd" class="inp !py-2 !text-xs flex-1">
+            <option value="">Selecione produto...</option>
+          </select>
+          <input type="number" id="fItemQtd" class="inp !py-2 !text-xs !w-16 flex-shrink-0" value="1" min="1">
+          <button onclick="addItemPedido()" class="bg-orange-600/20 hover:bg-orange-600/40 border border-orange-500/25 text-orange-300 rounded-xl font-black text-xs transition-all px-3 flex-shrink-0">+</button>
+        </div>
+        <div id="itensPedidoLista" class="space-y-1.5 max-h-32 overflow-y-auto scroll"></div>
+        <div class="flex justify-between items-center mt-2 pt-2 border-t border-white/5">
+          <span class="text-[9px] text-slate-500 font-bold uppercase">Subtotal itens</span>
+          <span id="subtotalItens" class="text-[11px] font-black text-orange-400">R$ 0,00</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div>
+          <label class="label">Taxa Entrega (R$)</label>
+          <input type="number" id="fTaxa" class="inp" placeholder="0.00" step="0.01" min="0" oninput="calcTotalPedido()">
+        </div>
+        <div>
+          <label class="label">Forma Pgto</label>
+          <select id="fFormaPgto" class="inp">
+            <option>Dinheiro</option>
+            <option>Pix</option>
+            <option>Débito</option>
+            <option>Crédito</option>
+          </select>
+        </div>
+        <div class="col-span-2">
+          <label class="label">Observações</label>
+          <input type="text" id="fObs" class="inp" placeholder="Sem gelo, urgente...">
+        </div>
+      </div>
+
+      <div class="bg-slate-900/60 border border-white/5 rounded-xl p-3 flex justify-between items-center">
+        <span class="text-[10px] font-black uppercase text-slate-400">Total do Pedido</span>
+        <span id="totalPedidoForm" class="text-xl font-black text-white">R$ 0,00</span>
+      </div>
+    </div>
+    <div class="p-5 border-t border-white/5 flex gap-3">
+      <button onclick="salvarPedido()" class="flex-1 bg-orange-700 hover:bg-orange-600 py-3 rounded-xl font-black uppercase text-xs text-white transition-all">
+        <i class="fas fa-save mr-1"></i>Salvar Pedido
+      </button>
+      <button onclick="UIService.closeModal('modalNovoPedido')" class="bg-slate-800 px-5 rounded-xl font-black uppercase text-xs text-slate-400">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ MODAL RELATÓRIO ══════ -->
+<div id="modalRelatorio" class="modal">
+  <div class="modal-box max-w-sm p-0 overflow-hidden">
+    <div class="p-5 border-b border-white/5 flex items-center justify-between">
+      <div>
+        <h3 class="text-sm font-black text-orange-400 flex items-center gap-2"><i class="fas fa-motorcycle"></i> Relatório Delivery</h3>
+        <p id="relData" class="text-[9px] text-slate-500 font-bold mt-0.5"></p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="copiarRelatorio()" class="w-8 h-8 rounded-lg bg-orange-600/20 text-orange-400 hover:bg-orange-600/30 flex items-center justify-center"><i class="fas fa-copy text-sm"></i></button>
+        <button onclick="baixarRelatorio()" class="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 flex items-center justify-center"><i class="fas fa-download text-sm"></i></button>
+        <button onclick="UIService.closeModal('modalRelatorio')" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
+      </div>
+    </div>
+    <div class="overflow-y-auto scroll" style="max-height:76vh;">
+      <div class="grid grid-cols-2 gap-3 p-5 border-b border-white/5">
+        <div class="bg-slate-900/60 border border-white/5 rounded-2xl p-3 text-center">
+          <p class="text-[8px] text-slate-500 font-black uppercase mb-1">Faturado Hoje</p>
+          <p id="relFatur" class="text-xl font-black text-white">R$ 0,00</p>
+        </div>
+        <div class="bg-slate-900/60 border border-white/5 rounded-2xl p-3 text-center">
+          <p class="text-[8px] text-slate-500 font-black uppercase mb-1">Entregues</p>
+          <p id="relEntregues" class="text-xl font-black text-emerald-400">0</p>
+        </div>
+        <div class="bg-orange-500/8 border border-orange-500/15 rounded-2xl p-3 text-center">
+          <p class="text-[8px] text-orange-400 font-black uppercase mb-1">Em Aberto</p>
+          <p id="relAberto" class="text-xl font-black text-orange-300">0</p>
+        </div>
+        <div class="bg-amber-500/8 border border-amber-500/15 rounded-2xl p-3 text-center">
+          <p class="text-[8px] text-amber-400 font-black uppercase mb-1">Taxa Total</p>
+          <p id="relTaxas" class="text-xl font-black text-amber-400">R$ 0,00</p>
+        </div>
+      </div>
+      <div class="p-5 border-b border-white/5">
+        <p class="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3">Pedidos de Hoje</p>
+        <div id="relLista" class="space-y-2 max-h-60 overflow-y-auto scroll"></div>
+      </div>
+      <div class="p-5">
+        <p class="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3">Por Entregador</p>
+        <div id="relEntregadores" class="space-y-1.5"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast">
+  <div id="toastIcon" class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-black"></div>
+  <div><span id="toastMsg" class="text-[11px] font-black uppercase tracking-wide block"></span><span id="toastSub" class="text-[9px] text-slate-500 font-bold"></span></div>
+</div>
+
+<script src="core.js"></script>
+  <script src="./services/syncService.js"></script>
+  <script src="./services/auditService.js"></script>
+  <script src="./services/syncMonitor.js"></script>
+  <script src="./services/backupService.js"></script>
+  <script src="./services/estoqueService.js"></script>
+  <script src="./services/financeiroService.js"></script>
+  <script src="./services/vendasService.js"></script>
+
+<script>
+'use strict';
+
+async function doLogin() {
+  const pin = document.getElementById('pinInput').value.trim();
+  const ok  = await AuthService.login(pin);
+  if (ok) { document.getElementById('lock').classList.add('hidden'); document.getElementById('app').classList.remove('hidden'); init(); }
+  else { const e=document.getElementById('lockError'); e.textContent='PIN incorreto.'; e.classList.remove('hidden'); document.getElementById('pinInput').value=''; }
+}
+document.getElementById('pinInput').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+function logout() { if (!confirm('Encerrar sessão?')) return; AuthService.logout(); location.reload(); }
+
+/* ═══════════ ESTADO ═══════════ */
+let _filtroStatus = 'TODOS';
+let _itensPedidoForm = []; // [{prodId, nome, preco, qtd}]
+
+/* ═══════════ INIT ═══════════ */
+function init() {
+  UIService.startClock('clock');
+  popularSelectProdutos();
+  preencherEntregadores();
+  atualizarKpis();
+  renderPedidos();
+  EventBus.on('store:updated', () => { atualizarKpis(); renderPedidos(); popularSelectProdutos(); preencherEntregadores(); });
+}
+
+/* ═══════════ POPULAR SELECTS ═══════════ */
+function popularSelectProdutos() {
+  const sel = document.getElementById('fItemProd');
+  if (!sel) return;
+  const prods = Store.getEstoque();
+  sel.innerHTML = '<option value="">Selecione produto...</option>' +
+    prods.map(p => `<option value="${p.id}" data-preco="${p.precoUn||0}">${p.nome} — ${Utils.formatCurrency(p.precoUn||0)}</option>`).join('');
+}
+
+function preencherEntregadores() {
+  const nomes = [...new Set(Store.getPedidos().map(p=>p.entregador||'').filter(Boolean))];
+  const dl = document.getElementById('entregadoresList');
+  if (dl) dl.innerHTML = nomes.map(n=>`<option value="${n}">`).join('');
+}
+
+/* ═══════════ KPIs ═══════════ */
+function atualizarKpis() {
+  const hoje    = Utils.todayISO();
+  const pedidos = Store.getPedidos();
+  _set('kpiNovos',    pedidos.filter(p=>p.status==='Novo').length);
+  _set('kpiPrep',     pedidos.filter(p=>p.status==='Preparando').length);
+  _set('kpiCaminho',  pedidos.filter(p=>p.status==='A Caminho').length);
+  _set('kpiEntregues',pedidos.filter(p=>p.status==='Entregue'&&p.dataCurta===hoje).length);
+}
+
+/* ═══════════ FILTRO ═══════════ */
+function setStatus(st, btn) {
+  _filtroStatus = st;
+  document.querySelectorAll('.status-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderPedidos();
+}
+
+/* ═══════════ RENDER PEDIDOS ═══════════ */
+const STATUS_ORDEM = ['Novo','Preparando','A Caminho','Entregue','Cancelado'];
+const STATUS_BADGE = { Novo:'b-blue', Preparando:'b-amber', 'A Caminho':'b-orange', Entregue:'b-green', Cancelado:'b-slate' };
+const STATUS_CLS   = { Novo:'novo', Preparando:'preparando', 'A Caminho':'caminho', Entregue:'entregue', Cancelado:'cancelado' };
+const STATUS_PROX  = { Novo:'Preparando', Preparando:'A Caminho', 'A Caminho':'Entregue' };
+
+function renderPedidos() {
+  let pedidos = Store.getPedidos();
+  if (_filtroStatus !== 'TODOS') pedidos = pedidos.filter(p=>p.status===_filtroStatus);
+  pedidos = [...pedidos].sort((a,b) => STATUS_ORDEM.indexOf(a.status)-STATUS_ORDEM.indexOf(b.status) || (b.criadoEm||'').localeCompare(a.criadoEm||''));
+
+  const el = document.getElementById('listaPedidos');
+  if (!el) return;
+
+  if (pedidos.length === 0) {
+    el.innerHTML = `<div class="flex flex-col items-center justify-center py-24 opacity-30">
+      <i class="fas fa-motorcycle text-5xl text-slate-600 mb-4"></i>
+      <p class="text-[10px] font-black uppercase tracking-widest text-slate-600">Nenhum pedido</p>
+      <button onclick="abrirFormNovo()" class="mt-4 bg-orange-700 hover:bg-orange-600 text-white px-4 py-2 rounded-xl font-black text-xs uppercase transition-all">+ Novo Pedido</button>
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = pedidos.map(p => {
+    const prox    = STATUS_PROX[p.status];
+    const tempo   = _tempoDecorrido(p.criadoEm);
+    const itensStr= (p.itens||[]).map(i=>`${i.nome}×${i.qtd}`).join(', ');
+    return `
+    <div class="pedido-card ${STATUS_CLS[p.status]||''}">
+      <div class="flex justify-between items-start mb-2">
+        <div class="flex-1 min-w-0">
+          <div class="flex items-center gap-2 flex-wrap mb-0.5">
+            <p class="text-[13px] font-black text-white">${p.cliente}</p>
+            <span class="badge ${STATUS_BADGE[p.status]||'b-slate'}">${p.status}</span>
+          </div>
+          <p class="text-[9px] text-slate-500 font-bold truncate">${p.endereco||'—'}</p>
+          <p class="text-[8px] text-slate-600 font-bold truncate mt-0.5">${itensStr||'—'}</p>
+        </div>
+        <div class="text-right flex-shrink-0 ml-3">
+          <p class="text-[13px] font-black text-orange-400">${Utils.formatCurrency(p.total||0)}</p>
+          <p class="text-[8px] text-slate-600 font-bold">${tempo}</p>
+        </div>
+      </div>
+      <div class="flex items-center justify-between mt-3 pt-2.5 border-t border-white/5">
+        <div class="flex items-center gap-2">
+          ${p.entregador ? `<span class="text-[9px] text-slate-400 font-bold"><i class="fas fa-motorcycle mr-1 text-orange-400"></i>${p.entregador}</span>` : '<span class="text-[8px] text-slate-600 font-bold">Sem entregador</span>'}
+          ${p.formaPgto ? `<span class="badge b-slate text-[7px]">${p.formaPgto}</span>` : ''}
+        </div>
+        <div class="flex gap-1.5">
+          <button onclick="editarPedido('${p.id}')" class="w-7 h-7 rounded-lg bg-slate-800 text-slate-400 hover:text-orange-400 flex items-center justify-center transition-all"><i class="fas fa-edit text-[9px]"></i></button>
+          ${prox ? `<button onclick="avancarStatus('${p.id}','${prox}')" class="bg-orange-700/30 border border-orange-500/30 text-orange-300 px-3 h-7 rounded-xl font-black text-[9px] uppercase hover:bg-orange-700/50 transition-all">→ ${prox}</button>` : ''}
+          ${p.status==='Novo'||p.status==='Preparando' ? `<button onclick="cancelarPedido('${p.id}')" class="w-7 h-7 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center justify-center transition-all"><i class="fas fa-times text-[9px]"></i></button>` : ''}
+        </div>
+      </div>
+      ${p.obs ? `<p class="mt-2 text-[8px] text-amber-400/80 font-bold bg-amber-500/8 rounded-lg px-2 py-1"><i class="fas fa-sticky-note mr-1"></i>${p.obs}</p>` : ''}
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════ FORM PEDIDO ═══════════ */
+function abrirFormNovo() {
+  _itensPedidoForm = [];
+  document.getElementById('fPedidoId').value = '';
+  document.getElementById('formTitulo').innerHTML = '<i class="fas fa-plus-circle"></i> Novo Pedido';
+  ['fCliente','fEndereco','fTelefone','fEntregador','fObs'].forEach(id => { const e=document.getElementById(id); if(e) e.value=''; });
+  document.getElementById('fTaxa').value = '0';
+  document.getElementById('fFormaPgto').value = 'Dinheiro';
+  renderItensPedidoForm();
+  UIService.openModal('modalNovoPedido');
+  setTimeout(() => document.getElementById('fCliente')?.focus(), 200);
+}
+
+function editarPedido(id) {
+  const p = Store.getPedidos().find(x=>x.id===id);
+  if (!p) return;
+  _itensPedidoForm = [...(p.itens||[])];
+  document.getElementById('fPedidoId').value    = p.id;
+  document.getElementById('formTitulo').innerHTML= '<i class="fas fa-edit"></i> Editar Pedido';
+  document.getElementById('fCliente').value      = p.cliente||'';
+  document.getElementById('fEndereco').value     = p.endereco||'';
+  document.getElementById('fTelefone').value     = p.telefone||'';
+  document.getElementById('fEntregador').value   = p.entregador||'';
+  document.getElementById('fObs').value          = p.obs||'';
+  document.getElementById('fTaxa').value         = p.taxa||0;
+  document.getElementById('fFormaPgto').value    = p.formaPgto||'Dinheiro';
+  renderItensPedidoForm();
+  UIService.openModal('modalNovoPedido');
+}
+
+function addItemPedido() {
+  const sel   = document.getElementById('fItemProd');
+  const qtd   = parseInt(document.getElementById('fItemQtd').value)||1;
+  const prodId= sel?.value;
+  if (!prodId) { UIService.showToast('Selecione um produto','','error'); return; }
+  const opt   = sel.options[sel.selectedIndex];
+  const preco = parseFloat(opt?.getAttribute('data-preco'))||0;
+  const nome  = opt?.text.split(' — ')[0]||'';
+  const idx   = _itensPedidoForm.findIndex(i=>i.prodId===prodId);
+  if (idx>=0) _itensPedidoForm[idx].qtd += qtd;
+  else _itensPedidoForm.push({ prodId, nome, preco, qtd });
+  sel.value = '';
+  document.getElementById('fItemQtd').value = 1;
+  renderItensPedidoForm();
+}
+
+function removerItemForm(idx) {
+  _itensPedidoForm.splice(idx, 1);
+  renderItensPedidoForm();
+}
+
+function renderItensPedidoForm() {
+  const el = document.getElementById('itensPedidoLista');
+  if (!el) return;
+  const subtotal = _itensPedidoForm.reduce((s,i)=>s+(i.preco*i.qtd),0);
+  el.innerHTML = _itensPedidoForm.length === 0
+    ? '<p class="text-[9px] text-slate-600 font-bold text-center py-2">Nenhum item</p>'
+    : _itensPedidoForm.map((i,idx) => `
+        <div class="flex items-center justify-between bg-slate-900/60 rounded-lg px-2.5 py-1.5">
+          <span class="text-[10px] font-bold text-white">${i.nome} ×${i.qtd}</span>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-black text-orange-400">${Utils.formatCurrency(i.preco*i.qtd)}</span>
+            <button onclick="removerItemForm(${idx})" class="text-red-400 hover:text-red-300 text-xs"><i class="fas fa-times"></i></button>
+          </div>
+        </div>`).join('');
+  _set('subtotalItens', Utils.formatCurrency(subtotal));
+  calcTotalPedido();
+}
+
+function calcTotalPedido() {
+  const sub  = _itensPedidoForm.reduce((s,i)=>s+(i.preco*i.qtd),0);
+  const taxa = parseFloat(document.getElementById('fTaxa')?.value)||0;
+  _set('totalPedidoForm', Utils.formatCurrency(sub+taxa));
+}
+
+function salvarPedido() {
+  const cliente = (document.getElementById('fCliente')?.value||'').trim();
+  if (!cliente) { UIService.showToast('Nome do cliente obrigatório','','error'); return; }
+
+  const id         = document.getElementById('fPedidoId').value || Utils.generateId();
+  const isEdicao   = !!document.getElementById('fPedidoId').value;
+  const sub        = _itensPedidoForm.reduce((s,i)=>s+(i.preco*i.qtd),0);
+  const taxa       = parseFloat(document.getElementById('fTaxa')?.value)||0;
+  const pedido = {
+    id,
+    cliente,
+    endereco:   (document.getElementById('fEndereco')?.value||'').trim(),
+    telefone:   (document.getElementById('fTelefone')?.value||'').trim(),
+    entregador: (document.getElementById('fEntregador')?.value||'').trim(),
+    obs:        (document.getElementById('fObs')?.value||'').trim(),
+    formaPgto:  document.getElementById('fFormaPgto')?.value||'Dinheiro',
+    itens:      [..._itensPedidoForm],
+    taxa, subtotal: sub, total: sub+taxa,
+    status:     isEdicao ? (Store.getPedidos().find(p=>p.id===id)?.status||'Novo') : 'Novo',
+    dataCurta:  Utils.todayISO(),
+    criadoEm:   isEdicao ? (Store.getPedidos().find(p=>p.id===id)?.criadoEm||new Date().toISOString()) : new Date().toISOString(),
+    atualizadoEm: new Date().toISOString(),
+  };
+
+  Store.mutatePedidos(pedidos => {
+    const idx = pedidos.findIndex(p=>p.id===id);
+    if (idx>=0) pedidos[idx] = pedido;
+    else pedidos.unshift(pedido);
+  });
+
+  UIService.closeModal('modalNovoPedido');
+  UIService.showToast(isEdicao?'Pedido atualizado!':'Pedido criado!', cliente, 'success');
+}
+
+/* ═══════════ AVANÇAR STATUS ═══════════ */
+async function avancarStatus(id, novoStatus) {
+  let _pedidoAtual = null;
+  Store.mutatePedidos(pedidos => {
+    const p = pedidos.find(x=>x.id===id);
+    if (p) { p.status=novoStatus; p.atualizadoEm=new Date().toISOString(); _pedidoAtual=p; }
+  });
+
+  if (novoStatus === 'Entregue' && _pedidoAtual) {
+    const p = _pedidoAtual;
+    const itens = (p.itens||[]).map(i => ({
+      prodId: i.prodId, nome: i.nome,
+      preco:  i.preco,  custo: i.custo||0,
+      label: 'UNID',   qtd:  i.qtd,
+    }));
+
+    // Monta proxy de CartService para VendasService
+    const cartProxy = {
+      getItems:    () => itens,
+      getTotal:    () => p.total  || 0,
+      getSubtotal: () => p.subtotal || (p.total||0) - (p.taxa||0),
+      getDesconto: () => 0,
+      clear:       () => {},
+    };
+
+    let venda = null;
+    if (window.CH?.VendasService) {
+      // VendasService: Transaction Firebase + baixa estoque + financeiro automático
+      try {
+        venda = await window.CH.VendasService.finalizarVenda(cartProxy, p.formaPgto || 'Dinheiro');
+        venda.origem      = 'DELIVERY';
+        venda.nomeCliente = p.cliente;
+        venda.taxa        = p.taxa || 0;
+        // Registra a taxa de entrega como receita adicional
+        if (window.CH?.FinanceiroService && p.taxa > 0) {
+          window.CH.FinanceiroService.registrarReceita({
+            id:        venda.id + '_taxa',
+            total:     p.taxa,
+            lucro:     p.taxa,
+            formaPgto: p.formaPgto,
+            itens:     [{ nome: 'Taxa de entrega', qtd: 1 }],
+          });
+        }
+      } catch(e) {
+        console.warn('[Delivery] VendasService falhou, fallback local:', e.message);
+      }
+    }
+
+    // Fallback legado
+    if (!venda) {
+      venda = {
+        id: Utils.generateId(), dataCurta: Utils.todayISO(),
+        data: Utils.today(), hora: Utils.nowTime(),
+        criadoEm: new Date().toISOString(),
+        itens, total: p.total||0, lucro: 0,
+        subtotal: p.subtotal||0, desconto: 0,
+        formaPgto: p.formaPgto||'Dinheiro',
+        origem: 'DELIVERY', nomeCliente: p.cliente,
+      };
+      Store.mutateVendas(vendas => { vendas.unshift(venda); });
+      Store.mutateEstoque(est => {
+        itens.forEach(item => {
+          const prod = est.find(x=>x.id===item.prodId);
+          if (prod) prod.qtdUn = Math.max(0,(prod.qtdUn||0)-item.qtd);
+        });
+      });
+      EventBus.emit('venda:finalizada', venda);
+    }
+
+    // Vincula a venda ao pedido
+    Store.mutatePedidos(pedidos => {
+      const ped = pedidos.find(x=>x.id===id);
+      if (ped) { ped.vendaId = venda?.id || null; ped.entregueEm = new Date().toISOString(); }
+    });
+
+    // Notificação Telegram na entrega
+    const itensDesc = itens.map(i=>`  · ${i.nome} x${i.qtd}`).join('\n');
+    TelegramService.enviar(
+      `✅ <b>Pedido Entregue — CH Geladas</b>\n` +
+      `━━━━━━━━━━━━━━━━━━\n` +
+      `👤 <b>Cliente:</b> ${p.cliente||'—'}\n` +
+      `📍 <b>Endereço:</b> ${p.endereco||'—'}\n` +
+      `🛵 <b>Entregador:</b> ${p.entregador||'—'}\n` +
+      `${itensDesc}\n` +
+      `━━━━━━━━━━━━━━━━━━\n` +
+      `💰 <b>Total:</b> ${Utils.formatCurrency(p.total||0)}\n` +
+      `💳 <b>Pgto:</b> ${p.formaPgto||'—'}\n` +
+      `🕐 <b>Hora:</b> ${Utils.nowTime()}`
+    );
+  }
+
+  if (novoStatus === 'A Caminho' && _pedidoAtual) {
+    const p = _pedidoAtual;
+    TelegramService.enviar(
+      `🛵 <b>Pedido Saiu para Entrega — CH Geladas</b>\n` +
+      `👤 <b>Cliente:</b> ${p.cliente||'—'}\n` +
+      `📍 <b>Endereço:</b> ${p.endereco||'—'}\n` +
+      `🛵 <b>Entregador:</b> ${p.entregador||'—'}\n` +
+      `💰 <b>Total:</b> ${Utils.formatCurrency(p.total||0)}\n` +
+      `🕐 <b>Hora:</b> ${Utils.nowTime()}`
+    );
+  }
+
+  const labels = { Preparando:'Preparando ⏳', 'A Caminho':'A caminho 🛵', Entregue:'Entregue ✅' };
+  UIService.showToast(labels[novoStatus]||novoStatus, '', 'success');
+}
+
+function cancelarPedido(id) {
+  if (!confirm('Cancelar este pedido?')) return;
+  Store.mutatePedidos(pedidos => {
+    const p = pedidos.find(x=>x.id===id);
+    if (p) { p.status='Cancelado'; p.atualizadoEm=new Date().toISOString(); }
+  });
+  UIService.showToast('Pedido cancelado','','warning');
+}
+
+/* ═══════════ RELATÓRIO ═══════════ */
+function abrirRelatorio() {
+  const hoje    = Utils.todayISO();
+  const pedidos = Store.getPedidos();
+  const entregues = pedidos.filter(p=>p.status==='Entregue'&&p.dataCurta===hoje);
+  const abertos   = pedidos.filter(p=>['Novo','Preparando','A Caminho'].includes(p.status));
+  const fatur     = entregues.reduce((s,p)=>s+(p.total||0),0);
+  const taxas     = entregues.reduce((s,p)=>s+(p.taxa||0),0);
+
+  _set('relFatur',     Utils.formatCurrency(fatur));
+  _set('relEntregues', entregues.length);
+  _set('relAberto',    abertos.length);
+  _set('relTaxas',     Utils.formatCurrency(taxas));
+  _set('relData',      'Hoje — '+Utils.today());
+
+  const listaEl = document.getElementById('relLista');
+  const todos = [...abertos, ...entregues].sort((a,b)=>(b.criadoEm||'').localeCompare(a.criadoEm||''));
+  if (listaEl) listaEl.innerHTML = todos.map(p=>`
+    <div class="flex items-center justify-between bg-slate-900/60 border border-white/5 rounded-xl px-3 py-2.5">
+      <div>
+        <p class="text-[10px] font-black text-white">${p.cliente}</p>
+        <p class="text-[8px] text-slate-500 font-bold">${p.entregador||'Sem entregador'} · ${p.formaPgto||'—'}</p>
+      </div>
+      <div class="text-right">
+        <p class="text-[11px] font-black text-orange-400">${Utils.formatCurrency(p.total||0)}</p>
+        <span class="badge ${STATUS_BADGE[p.status]||'b-slate'} text-[7px]">${p.status}</span>
+      </div>
+    </div>`).join('') || '<p class="text-[9px] text-slate-600 text-center py-4 font-bold">Sem pedidos hoje</p>';
+
+  // Por entregador
+  const entregadores = {};
+  entregues.forEach(p=>{
+    const e=p.entregador||'Sem entregador';
+    if(!entregadores[e]) entregadores[e]={pedidos:0,total:0,taxa:0};
+    entregadores[e].pedidos++; entregadores[e].total+=(p.total||0); entregadores[e].taxa+=(p.taxa||0);
+  });
+  const relEntEl = document.getElementById('relEntregadores');
+  if (relEntEl) relEntEl.innerHTML = Object.entries(entregadores).sort((a,b)=>b[1].pedidos-a[1].pedidos).map(([n,d])=>`
+    <div class="flex items-center justify-between bg-slate-900/60 border border-white/5 rounded-xl px-3 py-2.5">
+      <div><p class="text-[10px] font-black text-white"><i class="fas fa-motorcycle mr-1 text-orange-400"></i>${n}</p><p class="text-[8px] text-slate-500 font-bold">${d.pedidos} entrega${d.pedidos!==1?'s':''}</p></div>
+      <div class="text-right"><p class="text-[10px] font-black text-orange-400">${Utils.formatCurrency(d.total)}</p><p class="text-[8px] text-amber-400 font-bold">taxa ${Utils.formatCurrency(d.taxa)}</p></div>
+    </div>`).join('') || '<p class="text-[9px] text-slate-600 text-center py-4 font-bold">Sem entregas hoje</p>';
+
+  UIService.openModal('modalRelatorio');
+}
+
+function _gerarTextoRelatorio() {
+  const hoje    = Utils.todayISO();
+  const pedidos = Store.getPedidos();
+  const entregues = pedidos.filter(p=>p.status==='Entregue'&&p.dataCurta===hoje);
+  const abertos   = pedidos.filter(p=>['Novo','Preparando','A Caminho'].includes(p.status));
+  const fatur     = entregues.reduce((s,p)=>s+(p.total||0),0);
+  const cfg = Store.getConfig();
+  const nome = cfg?.nome||'CH Geladas';
+  const sep  = '═'.repeat(42); const sep2='─'.repeat(42);
+  let txt = `${sep}\n  ${nome} — RELATÓRIO DELIVERY\n  ${Utils.today()}\n${sep}\n\n`;
+  txt += `Faturado hoje:  ${Utils.formatCurrency(fatur)}\n`;
+  txt += `Entregues:      ${entregues.length}\n`;
+  txt += `Em aberto:      ${abertos.length}\n\n`;
+  if (entregues.length>0) {
+    txt += `${sep2}\nPEDIDOS ENTREGUES\n${sep2}\n`;
+    entregues.forEach(p => {
+      txt += `\n  ${p.cliente} — ${Utils.formatCurrency(p.total||0)} (${p.formaPgto})\n`;
+      txt += `  Entregador: ${p.entregador||'—'}\n`;
+      (p.itens||[]).forEach(i => txt += `    · ${i.nome} x${i.qtd}  ${Utils.formatCurrency(i.preco*i.qtd)}\n`);
+    });
+  }
+  if (abertos.length>0) {
+    txt += `\n${sep2}\nPEDIDOS EM ABERTO\n${sep2}\n`;
+    abertos.forEach(p => txt += `  [${p.status}] ${p.cliente} — ${Utils.formatCurrency(p.total||0)}\n`);
+  }
+  txt += `\n${sep}\nGerado por ${nome} PDV\n${sep}\n`;
+  return txt;
+}
+
+function copiarRelatorio() { Utils.copyToClipboard(_gerarTextoRelatorio()).then(()=>UIService.showToast('Copiado!','','success')); }
+function baixarRelatorio()  { Utils.downloadBlob(_gerarTextoRelatorio(),'text/plain;charset=utf-8;',`relatorio_delivery_${Utils.todayISO()}.txt`); UIService.showToast('Salvo!','','success'); }
+
+function _tempoDecorrido(iso) {
+  if (!iso) return '—';
+  const diff = Date.now()-new Date(iso).getTime();
+  const min  = Math.floor(diff/60000);
+  if (min<1)  return 'Agora';
+  if (min<60) return `${min}min`;
+  return `${Math.floor(min/60)}h${String(min%60).padStart(2,'0')}min`;
+}
+function _set(id,val) { const el=document.getElementById(id); if(el) el.textContent=val; }
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (AuthService.isLogged()) {
+    document.getElementById('lock').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    init();
+  }
+});
+</script>
+</body>
+</html>

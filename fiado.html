@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#04060d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CH Geladas">
+<title>Fiado — CH Geladas</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
+:root{--bg:#060810;--border:rgba(255,255,255,0.06);}
+*{box-sizing:border-box;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:#f1f5f9;min-height:100vh;user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+body{background-image:radial-gradient(ellipse at 20% 80%,rgba(239,68,68,.04) 0%,transparent 50%);}
+
+#lock{position:fixed;inset:0;z-index:9999;background:radial-gradient(ellipse at 50% 40%,#0f1a2e 0%,#060810 70%);display:flex;align-items:center;justify-content:center;}
+#lock.hidden{display:none;}
+
+.modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(0,0,0,.8);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s,visibility .2s;}
+.modal.open{opacity:1;visibility:visible;pointer-events:auto;}
+.modal.open>.modal-box{animation:mIn .22s cubic-bezier(.34,1.56,.64,1) forwards;}
+@keyframes mIn{from{opacity:0;transform:scale(.93) translateY(8px);}to{opacity:1;transform:scale(1) translateY(0);}}
+.modal-box{background:rgba(13,17,23,.98);border:1px solid rgba(255,255,255,.09);border-radius:2rem;width:100%;box-shadow:0 32px 64px rgba(0,0,0,.6);}
+
+.inp{font-size:16px!important;padding:12px 14px;color:#fff;background:#1e293b;border:2px solid #334155;border-radius:.75rem;width:100%;outline:none;transition:all .2s;font-family:inherit;}
+.inp:focus{border-color:#ef4444!important;box-shadow:0 0 0 4px rgba(239,68,68,.2)!important;background:#0f172a;}
+.inp::placeholder{color:#64748b;}
+.label{color:#f87171;font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.35rem;display:block;}
+
+/* CLIENTE CARD */
+.cli-card{background:rgba(13,17,23,.85);border:1px solid rgba(255,255,255,.07);border-radius:1.5rem;padding:1.25rem;transition:all .2s;cursor:pointer;position:relative;overflow:hidden;}
+.cli-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;border-radius:4px 0 0 4px;}
+.cli-card.devendo::before{background:#ef4444;}
+.cli-card.quitado::before{background:#10b981;}
+.cli-card.bloqueado::before{background:#6b7280;}
+.cli-card:hover{transform:translateY(-1px);border-color:rgba(255,255,255,.12);}
+
+/* DETALHE */
+.movim-row{background:rgba(13,17,23,.7);border:1px solid rgba(255,255,255,.05);border-radius:1rem;padding:.75rem;display:flex;align-items:center;gap:.75rem;}
+
+.badge{display:inline-flex;align-items:center;border-radius:9999px;font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:.2rem .55rem;}
+.b-red{background:rgba(239,68,68,.15);color:#f87171;}
+.b-green{background:rgba(16,185,129,.15);color:#34d399;}
+.b-blue{background:rgba(59,130,246,.15);color:#60a5fa;}
+.b-amber{background:rgba(245,158,11,.15);color:#fbbf24;}
+.b-slate{background:rgba(100,116,139,.15);color:#94a3b8;}
+
+.scroll::-webkit-scrollbar{width:3px;}
+.scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:10px;}
+.no-scroll{-ms-overflow-style:none;scrollbar-width:none;}
+.no-scroll::-webkit-scrollbar{display:none;}
+
+#toast{min-width:220px;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(4rem);opacity:0;pointer-events:none;z-index:200;transition:opacity .25s,transform .25s;background:rgba(13,17,23,.98);border:1px solid rgba(255,255,255,.09);border-radius:1.25rem;padding:1rem 1.25rem;display:flex;align-items:center;gap:.75rem;box-shadow:0 24px 48px rgba(0,0,0,.5);}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+.vista{display:none;}
+.vista.ativa{display:block;}
+.adm-only{display:none!important;}
+body.is-admin .adm-only{display:flex!important;}
+</style>
+</head>
+<body>
+
+<!-- LOCK -->
+<div id="lock">
+  <div style="background:rgba(13,17,23,.95);border:1px solid rgba(255,255,255,.08);border-radius:2.5rem;padding:2.5rem;width:100%;max-width:360px;margin:0 1rem;text-align:center;box-shadow:0 40px 80px rgba(0,0,0,.8);">
+    <div class="text-5xl mb-4">🤝</div>
+    <h1 class="text-2xl font-black mb-1 uppercase tracking-tight">CH <span class="text-red-400">GELADAS</span></h1>
+    <p class="text-[9px] text-slate-600 font-bold uppercase tracking-widest mb-8">Módulo de Fiado</p>
+    <input type="password" id="pinInput" autocomplete="current-password" inputmode="numeric"
+      class="w-full bg-slate-950 border-2 border-slate-800 focus:border-red-500 p-5 rounded-2xl text-center text-2xl outline-none text-white tracking-[.4em] transition-all font-mono mb-4"
+      placeholder="· · · · ·" maxlength="8">
+    <div id="lockError" class="hidden text-[10px] text-red-400 font-bold mb-3"></div>
+    <button onclick="doLogin()" class="w-full bg-red-700 hover:bg-red-600 py-4 rounded-xl font-black uppercase text-xs tracking-widest transition-all">
+      <i class="fas fa-unlock-alt mr-2"></i>Entrar
+    </button>
+    <div class="mt-6"><a href="index.html" class="text-[9px] text-slate-700 hover:text-slate-500 font-bold uppercase tracking-widest transition-colors">← Hub Principal</a></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden flex flex-col min-h-screen">
+
+  <header class="sticky top-0 z-40 px-4 py-3 flex justify-between items-center" style="background:rgba(6,8,16,.96);border-bottom:1px solid rgba(255,255,255,.04);">
+    <div class="flex items-center gap-3">
+      <button id="btnVoltar" onclick="voltarLista()" class="hidden w-8 h-8 rounded-xl bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center transition-all">
+        <i class="fas fa-arrow-left text-xs"></i>
+      </button>
+      <span class="text-2xl">🤝</span>
+      <div>
+        <h1 id="headerTitulo" class="text-[10px] font-black uppercase tracking-widest text-red-400">Fiado</h1>
+        <p id="clock" class="text-[9px] font-mono text-slate-600 mt-0.5">00:00:00</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="btnRelatorio" onclick="abrirRelatorio()" class="w-8 h-8 rounded-lg bg-slate-900 border border-white/5 flex items-center justify-center text-slate-500 hover:text-red-400 transition-all">
+        <i class="fas fa-chart-bar text-xs"></i>
+      </button>
+      <button id="btnNovoCliente" onclick="abrirFormCliente()" class="bg-red-700 hover:bg-red-600 text-white px-3 py-2 rounded-xl font-black text-[9px] uppercase tracking-wide transition-all flex items-center gap-1.5">
+        <i class="fas fa-user-plus text-[9px]"></i>Cliente
+      </button>
+      <button onclick="logout()" class="w-8 h-8 rounded-lg bg-slate-900 border border-white/5 flex items-center justify-center text-slate-500 hover:text-red-400 transition-all">
+        <i class="fas fa-power-off text-xs"></i>
+      </button>
+    </div>
+  </header>
+
+  <!-- VISTA LISTA -->
+  <div id="vistaLista" class="vista ativa flex-1 p-3 pb-28">
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-3 gap-2 mb-3">
+      <div class="bg-red-500/8 border border-red-500/15 rounded-2xl p-3 text-center">
+        <p class="text-[8px] text-red-400 font-black uppercase tracking-wider mb-1">Total Devido</p>
+        <p id="kpiTotal" class="text-lg font-black text-red-300">R$ 0,00</p>
+      </div>
+      <div class="bg-slate-900/50 border border-white/5 rounded-2xl p-3 text-center">
+        <p class="text-[8px] text-slate-400 font-black uppercase tracking-wider mb-1">Clientes</p>
+        <p id="kpiClientes" class="text-lg font-black text-white">0</p>
+      </div>
+      <div class="bg-amber-500/8 border border-amber-500/15 rounded-2xl p-3 text-center">
+        <p class="text-[8px] text-amber-400 font-black uppercase tracking-wider mb-1">Bloqueados</p>
+        <p id="kpiBloqueados" class="text-lg font-black text-amber-300">0</p>
+      </div>
+    </div>
+
+    <!-- Busca -->
+    <div class="relative mb-3">
+      <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs pointer-events-none"></i>
+      <input type="text" id="buscaCliente" oninput="renderClientes()" class="inp !pl-9 !py-2.5" placeholder="Buscar cliente...">
+    </div>
+
+    <!-- Lista de clientes -->
+    <div id="listaClientes" class="grid md:grid-cols-2 gap-3"></div>
+  </div>
+
+  <!-- VISTA DETALHE CLIENTE -->
+  <div id="vistaDetalhe" class="vista flex-1 p-3 pb-28 space-y-3">
+    <!-- Info do cliente -->
+    <div class="bg-slate-900/50 border border-white/5 rounded-3xl p-5">
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <p id="detNome"   class="text-xl font-black text-white"></p>
+          <p id="detTel"    class="text-[9px] text-slate-500 font-bold mt-0.5"></p>
+          <p id="detLimite" class="text-[9px] text-amber-400 font-bold mt-0.5"></p>
+        </div>
+        <div class="text-right">
+          <p class="text-[8px] text-slate-500 font-black uppercase">Saldo Devedor</p>
+          <p id="detSaldo" class="text-3xl font-black text-red-400">R$ 0,00</p>
+          <span id="detStatus" class="badge b-red mt-1">Devendo</span>
+        </div>
+      </div>
+      <!-- Ações rápidas -->
+      <div class="grid grid-cols-3 gap-2">
+        <button onclick="abrirLancarFiado()" class="py-3 rounded-2xl bg-red-600/20 border border-red-500/25 text-red-300 font-black text-[9px] uppercase flex flex-col items-center gap-1 transition-all active:scale-95 hover:bg-red-600/35">
+          <i class="fas fa-plus text-base"></i>Lançar
+        </button>
+        <button onclick="abrirReceberPgto()" class="py-3 rounded-2xl bg-emerald-600/20 border border-emerald-500/25 text-emerald-300 font-black text-[9px] uppercase flex flex-col items-center gap-1 transition-all active:scale-95 hover:bg-emerald-600/35">
+          <i class="fas fa-hand-holding-usd text-base"></i>Receber
+        </button>
+        <button onclick="editarCliente()" class="py-3 rounded-2xl bg-slate-800 border border-white/5 text-slate-400 font-black text-[9px] uppercase flex flex-col items-center gap-1 transition-all active:scale-95 hover:bg-slate-700">
+          <i class="fas fa-cog text-base"></i>Config
+        </button>
+        <button onclick="zerarSaldoCliente()" class="adm-only py-3 rounded-2xl bg-amber-600/20 border border-amber-500/25 text-amber-300 font-black text-[9px] uppercase flex flex-col items-center gap-1 transition-all active:scale-95 hover:bg-amber-600/35">
+          <i class="fas fa-eraser text-base"></i>Zerar
+        </button>
+      </div>
+    </div>
+
+    <!-- Histórico de movimentações -->
+    <div>
+      <p class="text-[9px] text-slate-500 font-black uppercase tracking-widest mb-2 px-1">Histórico</p>
+      <div id="detHistorico" class="space-y-2 max-h-80 overflow-y-auto scroll"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ MODAL FORM CLIENTE ══════ -->
+<div id="modalCliente" class="modal">
+  <div class="modal-box max-w-sm p-8">
+    <h3 id="formCliTitulo" class="text-sm font-black text-red-400 mb-6 flex items-center gap-2"><i class="fas fa-user"></i> Novo Cliente</h3>
+    <input type="hidden" id="fCliId">
+    <div class="space-y-4">
+      <div>
+        <label class="label">Nome <span class="text-red-500">*</span></label>
+        <input type="text" id="fCliNome" class="inp" placeholder="Nome do cliente">
+      </div>
+      <div>
+        <label class="label">Telefone</label>
+        <input type="tel" id="fCliTel" class="inp" placeholder="(71) 9 9999-9999">
+      </div>
+      <div>
+        <label class="label">Limite de Crédito (R$)</label>
+        <input type="number" id="fCliLimite" class="inp" placeholder="Ex: 100.00" step="0.01" min="0">
+        <p class="text-[8px] text-slate-600 font-bold mt-1">Deixe 0 para sem limite</p>
+      </div>
+    </div>
+    <div class="flex gap-3 mt-6">
+      <button onclick="salvarCliente()" class="flex-1 bg-red-700 hover:bg-red-600 py-3.5 rounded-xl font-black uppercase text-xs text-white transition-all">
+        <i class="fas fa-save mr-1"></i>Salvar
+      </button>
+      <button onclick="UIService.closeModal('modalCliente')" class="bg-slate-800 px-5 rounded-xl font-black uppercase text-xs text-slate-400">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ MODAL LANÇAR FIADO ══════ -->
+<div id="modalLancar" class="modal">
+  <div class="modal-box max-w-sm p-8">
+    <h3 class="text-sm font-black text-red-400 mb-6 flex items-center gap-2"><i class="fas fa-plus-circle"></i> Lançar Fiado</h3>
+    <p id="lancarNome" class="text-[10px] text-slate-400 font-bold uppercase mb-4"></p>
+    <div class="space-y-4">
+      <div>
+        <label class="label">Valor (R$) <span class="text-red-500">*</span></label>
+        <input type="number" id="fLancarValor" class="inp text-xl font-black" placeholder="0,00" step="0.01" min="0.01">
+      </div>
+      <div>
+        <label class="label">Descrição</label>
+        <input type="text" id="fLancarDesc" class="inp" placeholder="Ex: Cerveja Skol, Refrigerante...">
+      </div>
+    </div>
+    <div class="flex gap-3 mt-6">
+      <button onclick="confirmarLancamento()" class="flex-1 bg-red-700 hover:bg-red-600 py-3.5 rounded-xl font-black uppercase text-xs text-white transition-all">
+        <i class="fas fa-plus mr-1"></i>Lançar
+      </button>
+      <button onclick="UIService.closeModal('modalLancar')" class="bg-slate-800 px-5 rounded-xl font-black uppercase text-xs text-slate-400">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════ MODAL RECEBER PAGAMENTO ══════ -->
+<div id="modalReceber" class="modal">
+  <div class="modal-box max-w-sm p-8">
+    <h3 class="text-sm font-black text-emerald-400 mb-2 flex items-center gap-2"><i class="fas fa-hand-holding-usd"></i> Receber Pagamento</h3>
+    <p id="receberNome" class="text-[10px] text-slate-400 font-bold uppercase mb-1"></p>
+    <p id="receberSaldoAtual" class="text-[9px] text-red-400 font-bold mb-6"></p>
+    <div class="space-y-4">
+      <div>
+        <label class="label !text-emerald-400">Valor Recebido (R$) <span class="text-red-500">*</span></label>
+        <input type="number" id="fReceberValor" class="inp text-xl font-black" placeholder="0,00" step="0.01" min="0.01">
+      </div>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="document.getElementById('fReceberValor').value=_getSaldoAtual().toFixed(2)" class="py-2.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 font-black text-[9px] uppercase transition-all hover:bg-emerald-500/20">Total</button>
+        <button onclick="document.getElementById('fReceberValor').value=(_getSaldoAtual()/2).toFixed(2)" class="py-2.5 rounded-xl bg-slate-800 border border-white/5 text-slate-400 font-black text-[9px] uppercase transition-all hover:bg-slate-700">Metade</button>
+      </div>
+      <div>
+        <label class="label !text-emerald-400">Forma de Pagamento</label>
+        <div class="grid grid-cols-3 gap-2">
+          <button onclick="confirmarRecebimento('Dinheiro')" class="py-3 rounded-xl bg-emerald-600/20 border border-emerald-500/25 text-emerald-300 font-black text-[9px] uppercase flex flex-col items-center gap-1 active:scale-95 hover:bg-emerald-600/35 transition-all"><i class="fas fa-money-bill-wave text-base"></i>Dinheiro</button>
+          <button onclick="confirmarRecebimento('Pix')"     class="py-3 rounded-xl bg-blue-600/20 border border-blue-500/25 text-blue-300 font-black text-[9px] uppercase flex flex-col items-center gap-1 active:scale-95 hover:bg-blue-600/35 transition-all"><i class="fas fa-qrcode text-base"></i>Pix</button>
+          <button onclick="confirmarRecebimento('Cartão')"  class="py-3 rounded-xl bg-purple-600/20 border border-purple-500/25 text-purple-300 font-black text-[9px] uppercase flex flex-col items-center gap-1 active:scale-95 hover:bg-purple-600/35 transition-all"><i class="fas fa-credit-card text-base"></i>Cartão</button>
+        </div>
+      </div>
+    </div>
+    <button onclick="UIService.closeModal('modalReceber')" class="w-full mt-4 bg-slate-800 py-3 rounded-xl font-black uppercase text-xs text-slate-400">Cancelar</button>
+  </div>
+</div>
+
+<!-- ══════ MODAL RELATÓRIO ══════ -->
+<div id="modalRelatorio" class="modal">
+  <div class="modal-box max-w-sm p-0 overflow-hidden">
+    <div class="p-5 border-b border-white/5 flex items-center justify-between">
+      <div>
+        <h3 class="text-sm font-black text-red-400 flex items-center gap-2"><i class="fas fa-handshake"></i> Relatório de Fiado</h3>
+        <p id="relData" class="text-[9px] text-slate-500 font-bold mt-0.5"></p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="copiarRelatorio()" class="w-8 h-8 rounded-lg bg-red-600/20 text-red-400 hover:bg-red-600/30 flex items-center justify-center"><i class="fas fa-copy text-sm"></i></button>
+        <button onclick="baixarRelatorio()" class="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 flex items-center justify-center"><i class="fas fa-download text-sm"></i></button>
+        <button onclick="UIService.closeModal('modalRelatorio')" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
+      </div>
+    </div>
+    <div class="overflow-y-auto scroll" style="max-height:76vh;">
+      <div class="grid grid-cols-2 gap-3 p-5 border-b border-white/5">
+        <div class="bg-red-500/8 border border-red-500/15 rounded-2xl p-3 text-center">
+          <p class="text-[8px] text-red-400 font-black uppercase mb-1">Total Devido</p>
+          <p id="relTotalDevido" class="text-xl font-black text-red-300">R$ 0,00</p>
+        </div>
+        <div class="bg-slate-900/60 border border-white/5 rounded-2xl p-3 text-center">
+          <p class="text-[8px] text-slate-500 font-black uppercase mb-1">Clientes c/ Saldo</p>
+          <p id="relComSaldo" class="text-xl font-black text-white">0</p>
+        </div>
+        <div class="bg-emerald-500/8 border border-emerald-500/15 rounded-2xl p-3 text-center">
+          <p class="text-[8px] text-emerald-400 font-black uppercase mb-1">Quitados</p>
+          <p id="relQuitados" class="text-xl font-black text-emerald-400">0</p>
+        </div>
+        <div class="bg-amber-500/8 border border-amber-500/15 rounded-2xl p-3 text-center">
+          <p class="text-[8px] text-amber-400 font-black uppercase mb-1">Bloqueados</p>
+          <p id="relBloqueados" class="text-xl font-black text-amber-400">0</p>
+        </div>
+      </div>
+      <div class="p-5">
+        <p class="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3">Saldo por Cliente</p>
+        <div id="relLista" class="space-y-1.5 max-h-72 overflow-y-auto scroll"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast">
+  <div id="toastIcon" class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-black"></div>
+  <div><span id="toastMsg" class="text-[11px] font-black uppercase tracking-wide block"></span><span id="toastSub" class="text-[9px] text-slate-500 font-bold"></span></div>
+</div>
+
+<script src="core.js"></script>
+  <script src="./services/syncService.js"></script>
+  <script src="./services/auditService.js"></script>
+  <script src="./services/syncMonitor.js"></script>
+  <script src="./services/backupService.js"></script>
+
+<script>
+'use strict';
+
+async function doLogin() {
+  const pin = document.getElementById('pinInput').value.trim();
+  const ok  = await AuthService.login(pin);
+  if (ok) { document.getElementById('lock').classList.add('hidden'); document.getElementById('app').classList.remove('hidden'); init(); }
+  else { const e=document.getElementById('lockError'); e.textContent='PIN incorreto.'; e.classList.remove('hidden'); document.getElementById('pinInput').value=''; }
+}
+document.getElementById('pinInput').addEventListener('keydown', e => { if (e.key==='Enter') doLogin(); });
+function logout() { if (!confirm('Encerrar sessão?')) return; AuthService.logout(); location.reload(); }
+
+/* ═══════════ ESTADO ═══════════ */
+let _clienteAtualId = null;
+
+/* ═══════════ INIT ═══════════ */
+function init() {
+  UIService.startClock('clock');
+  if (AuthService.isAdmin()) document.body.classList.add('is-admin');
+  atualizarKpis();
+  renderClientes();
+  EventBus.on('store:updated', () => { atualizarKpis(); if (_clienteAtualId) renderDetalhe(); else renderClientes(); });
+}
+
+/* ═══════════ VISTAS ═══════════ */
+function mostrarVista(v) {
+  document.getElementById('vistaLista').classList.toggle('ativa', v==='lista');
+  document.getElementById('vistaDetalhe').classList.toggle('ativa', v==='detalhe');
+  document.getElementById('btnVoltar').classList.toggle('hidden', v==='lista');
+  document.getElementById('btnNovoCliente').classList.toggle('hidden', v==='detalhe');
+  document.getElementById('btnRelatorio').classList.toggle('hidden', v==='detalhe');
+}
+
+function voltarLista() {
+  _clienteAtualId = null;
+  _set('headerTitulo','Fiado');
+  mostrarVista('lista');
+  atualizarKpis();
+  renderClientes();
+}
+
+/* ═══════════ KPIs ═══════════ */
+function atualizarKpis() {
+  const clientes   = Store.getFiado();
+  const totalDev   = clientes.reduce((s,c) => s+(c.saldo||0), 0);
+  const bloqueados = clientes.filter(c=>c.bloqueado).length;
+  _set('kpiTotal',     Utils.formatCurrency(totalDev));
+  _set('kpiClientes',  clientes.length);
+  _set('kpiBloqueados',bloqueados);
+}
+
+/* ═══════════ LISTA DE CLIENTES ═══════════ */
+function renderClientes() {
+  const busca    = (document.getElementById('buscaCliente')?.value||'').toLowerCase();
+  let clientes   = Store.getFiado();
+  if (busca) clientes = clientes.filter(c=>(c.nome||'').toLowerCase().includes(busca)||(c.telefone||'').includes(busca));
+  clientes = [...clientes].sort((a,b)=>(b.saldo||0)-(a.saldo||0));
+
+  const el = document.getElementById('listaClientes');
+  if (!el) return;
+
+  if (clientes.length === 0) {
+    el.innerHTML = `<div class="col-span-2 flex flex-col items-center justify-center py-24 opacity-30">
+      <i class="fas fa-handshake text-5xl text-slate-600 mb-4"></i>
+      <p class="text-[10px] font-black uppercase tracking-widest text-slate-600">${Store.getFiado().length===0?'Nenhum cliente cadastrado':'Nenhum cliente encontrado'}</p>
+      ${Store.getFiado().length===0?'<button onclick="abrirFormCliente()" class="mt-4 bg-red-700 hover:bg-red-600 text-white px-4 py-2 rounded-xl font-black text-xs uppercase transition-all">+ Adicionar Cliente</button>':''}
+    </div>`;
+    return;
+  }
+
+  el.innerHTML = clientes.map(c => {
+    const saldo    = c.saldo||0;
+    const quitado  = saldo <= 0;
+    const status   = c.bloqueado ? 'bloqueado' : quitado ? 'quitado' : 'devendo';
+    const badgeCls = c.bloqueado ? 'b-amber' : quitado ? 'b-green' : 'b-red';
+    const badgeTxt = c.bloqueado ? '🔒 Bloqueado' : quitado ? '✓ Quitado' : `Deve ${Utils.formatCurrency(saldo)}`;
+    return `<div class="cli-card ${status}" onclick="abrirCliente('${c.id}')">
+      <div class="flex items-start justify-between mb-3">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-2xl bg-slate-800 flex items-center justify-center font-black text-lg text-slate-300 flex-shrink-0">${(c.nome||'?').charAt(0).toUpperCase()}</div>
+          <div>
+            <p class="text-[13px] font-black text-white">${c.nome}</p>
+            ${c.telefone ? `<p class="text-[8px] text-slate-500 font-bold">${c.telefone}</p>` : ''}
+          </div>
+        </div>
+        <span class="badge ${badgeCls} flex-shrink-0">${badgeTxt}</span>
+      </div>
+      ${c.limite>0 ? `<div class="mt-2"><div class="flex justify-between text-[8px] font-bold mb-1"><span class="text-slate-500">Limite</span><span class="text-amber-400">${Utils.formatCurrency(saldo)} / ${Utils.formatCurrency(c.limite)}</span></div><div class="h-1.5 bg-slate-800 rounded-full overflow-hidden"><div class="h-full ${saldo>c.limite?'bg-red-500':'bg-amber-500'} rounded-full" style="width:${Math.min(100,(saldo/c.limite)*100)}%"></div></div></div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+/* ═══════════ DETALHE DO CLIENTE ═══════════ */
+function abrirCliente(id) {
+  _clienteAtualId = id;
+  const c = Store.getFiado().find(x=>x.id===id);
+  if (!c) return;
+  _set('headerTitulo', c.nome);
+  mostrarVista('detalhe');
+  renderDetalhe();
+}
+
+function renderDetalhe() {
+  const c = Store.getFiado().find(x=>x.id===_clienteAtualId);
+  if (!c) return;
+  const saldo   = c.saldo||0;
+  const quitado = saldo <= 0;
+  _set('detNome',   c.nome);
+  _set('detTel',    c.telefone ? '📞 '+c.telefone : '');
+  _set('detLimite', c.limite>0 ? `Limite: ${Utils.formatCurrency(c.limite)}` : 'Sem limite');
+  _set('detSaldo',  Utils.formatCurrency(Math.abs(saldo)));
+  const stEl = document.getElementById('detStatus');
+  if (stEl) {
+    stEl.textContent = c.bloqueado ? '🔒 Bloqueado' : quitado ? '✓ Quitado' : 'Devendo';
+    stEl.className   = 'badge ' + (c.bloqueado ? 'b-amber' : quitado ? 'b-green' : 'b-red') + ' mt-1';
+  }
+  const saldoEl = document.getElementById('detSaldo');
+  if (saldoEl) saldoEl.className = `text-3xl font-black ${quitado ? 'text-emerald-400' : 'text-red-400'}`;
+
+  // Histórico
+  const movs = (c.movimentacoes||[]).slice(0,100);
+  const histEl = document.getElementById('detHistorico');
+  if (histEl) {
+    if (movs.length===0) { histEl.innerHTML='<p class="text-[9px] text-slate-600 text-center py-8 font-bold">Nenhuma movimentação</p>'; }
+    else histEl.innerHTML = movs.map(m => {
+      const entrada = m.tipo==='pagamento';
+      const data    = m.criadoEm ? new Date(m.criadoEm).toLocaleString('pt-BR') : '—';
+      return `<div class="movim-row">
+        <div class="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 ${entrada?'bg-emerald-500/15 text-emerald-400':'bg-red-500/15 text-red-400'}">
+          <i class="fas ${entrada?'fa-arrow-down':'fa-arrow-up'} text-sm"></i>
+        </div>
+        <div class="flex-1 min-w-0">
+          <p class="text-[11px] font-black text-white">${m.descricao||m.tipo}</p>
+          <p class="text-[8px] text-slate-500 font-bold">${data}${m.formaPgto?' · '+m.formaPgto:''}</p>
+        </div>
+        <div class="flex items-center gap-2 flex-shrink-0">
+          <div class="text-right">
+            <p class="text-[12px] font-black ${entrada?'text-emerald-400':'text-red-400'}">${entrada?'-':'+'}${Utils.formatCurrency(m.valor)}</p>
+          </div>
+          ${AuthService.isAdmin() ? `<button onclick="apagarMovimentacao('${m.id}')" class="w-7 h-7 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center justify-center" title="Apagar"><i class="fas fa-times text-[9px]"></i></button>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+/* ═══════════ FORM CLIENTE ═══════════ */
+function abrirFormCliente(id) {
+  const isEditar = !!id;
+  const c = id ? Store.getFiado().find(x=>x.id===id) : null;
+  document.getElementById('fCliId').value    = c?.id||'';
+  document.getElementById('fCliNome').value  = c?.nome||'';
+  document.getElementById('fCliTel').value   = c?.telefone||'';
+  document.getElementById('fCliLimite').value= c?.limite||0;
+  _set('formCliTitulo', isEditar ? '<i class="fas fa-edit"></i> Editar Cliente' : '<i class="fas fa-user-plus"></i> Novo Cliente');
+  document.getElementById('formCliTitulo').innerHTML = isEditar ? '<i class="fas fa-edit"></i> Editar Cliente' : '<i class="fas fa-user-plus"></i> Novo Cliente';
+  UIService.openModal('modalCliente');
+  setTimeout(() => document.getElementById('fCliNome')?.focus(), 200);
+}
+
+function editarCliente() { abrirFormCliente(_clienteAtualId); }
+
+function salvarCliente() {
+  const nome   = (document.getElementById('fCliNome')?.value||'').trim();
+  const tel    = (document.getElementById('fCliTel')?.value||'').trim();
+  const limite = parseFloat(document.getElementById('fCliLimite')?.value)||0;
+  const id     = document.getElementById('fCliId')?.value;
+  if (!nome) { UIService.showToast('Nome obrigatório','','error'); return; }
+
+  Store.mutateFiado(fiado => {
+    if (id) {
+      const idx = fiado.findIndex(c=>c.id===id);
+      if (idx>=0) { fiado[idx].nome=nome; fiado[idx].telefone=tel; fiado[idx].limite=limite; }
+    } else {
+      fiado.unshift({ id:Utils.generateId(), nome, telefone:tel, limite, saldo:0, bloqueado:false, movimentacoes:[], criadoEm:new Date().toISOString() });
+    }
+  });
+  UIService.closeModal('modalCliente');
+  UIService.showToast(id?'Cliente atualizado!':'Cliente cadastrado!', nome, 'success');
+}
+
+/* ═══════════ LANÇAR FIADO ═══════════ */
+function abrirLancarFiado() {
+  const c = Store.getFiado().find(x=>x.id===_clienteAtualId);
+  if (!c) return;
+  // Verifica bloqueio por limite
+  if (c.bloqueado) { UIService.showToast('Cliente bloqueado','Quite o saldo primeiro','error'); return; }
+  if (c.limite>0 && (c.saldo||0) >= c.limite) { UIService.showToast('Limite atingido',`Limite: ${Utils.formatCurrency(c.limite)}`,'error'); return; }
+  _set('lancarNome', c.nome + ' — Saldo: ' + Utils.formatCurrency(c.saldo||0));
+  document.getElementById('fLancarValor').value = '';
+  document.getElementById('fLancarDesc').value  = '';
+  UIService.openModal('modalLancar');
+  setTimeout(() => document.getElementById('fLancarValor')?.focus(), 200);
+}
+
+function confirmarLancamento() {
+  const valor = parseFloat(document.getElementById('fLancarValor')?.value)||0;
+  const desc  = (document.getElementById('fLancarDesc')?.value||'').trim()||'Compra fiado';
+  if (valor <= 0) { UIService.showToast('Valor inválido','','error'); return; }
+
+  Store.mutateFiado(fiado => {
+    const c = fiado.find(x=>x.id===_clienteAtualId);
+    if (!c) return;
+    c.saldo = (c.saldo||0) + valor;
+    if (!Array.isArray(c.movimentacoes)) c.movimentacoes = [];
+    c.movimentacoes.unshift({ id:Utils.generateId(), tipo:'fiado', descricao:desc, valor, criadoEm:new Date().toISOString() });
+    if (c.limite>0 && c.saldo >= c.limite) c.bloqueado = true;
+  });
+
+  UIService.closeModal('modalLancar');
+  UIService.showToast(`+${Utils.formatCurrency(valor)} fiado`, desc, 'warning');
+  renderDetalhe();
+}
+
+/* ═══════════ RECEBER PAGAMENTO ═══════════ */
+function abrirReceberPgto() {
+  const c = Store.getFiado().find(x=>x.id===_clienteAtualId);
+  if (!c || (c.saldo||0) <= 0) { UIService.showToast('Sem saldo devedor','','info'); return; }
+  _set('receberNome', c.nome);
+  _set('receberSaldoAtual', 'Saldo atual: ' + Utils.formatCurrency(c.saldo||0));
+  document.getElementById('fReceberValor').value = '';
+  UIService.openModal('modalReceber');
+  setTimeout(() => document.getElementById('fReceberValor')?.focus(), 200);
+}
+
+function _getSaldoAtual() {
+  return Store.getFiado().find(x=>x.id===_clienteAtualId)?.saldo||0;
+}
+
+function confirmarRecebimento(forma) {
+  const valor = parseFloat(document.getElementById('fReceberValor')?.value)||0;
+  if (valor <= 0) { UIService.showToast('Valor inválido','','error'); return; }
+
+  let _nomeCliente = '';
+  Store.mutateFiado(fiado => {
+    const c = fiado.find(x=>x.id===_clienteAtualId);
+    if (!c) return;
+    _nomeCliente = c.nome;
+    c.saldo = Math.max(0, (c.saldo||0) - valor);
+    if (!Array.isArray(c.movimentacoes)) c.movimentacoes = [];
+    c.movimentacoes.unshift({ id:Utils.generateId(), tipo:'pagamento', descricao:'Pagamento recebido', valor, formaPgto:forma, criadoEm:new Date().toISOString() });
+    if (c.saldo <= 0) c.bloqueado = false;
+  });
+  // Registra movimentação financeira separada
+  Store.mutateVendas(vendas => {
+    vendas.unshift({ id:Utils.generateId(), dataCurta:Utils.todayISO(), data:Utils.today(), hora:Utils.nowTime(),
+      criadoEm:new Date().toISOString(), itens:[], total:valor, subtotal:valor, desconto:0, lucro:0,
+      formaPgto:forma, origem:'FIADO', nomeCliente:_nomeCliente });
+  });
+
+  UIService.closeModal('modalReceber');
+  UIService.showToast(`Recebido ${Utils.formatCurrency(valor)}`, forma, 'success');
+  renderDetalhe();
+}
+
+/* ═══════════ RELATÓRIO ═══════════ */
+function abrirRelatorio() {
+  const clientes   = Store.getFiado();
+  const comSaldo   = clientes.filter(c=>(c.saldo||0)>0);
+  const quitados   = clientes.filter(c=>(c.saldo||0)<=0);
+  const bloqueados = clientes.filter(c=>c.bloqueado);
+  const totalDevido= comSaldo.reduce((s,c)=>s+(c.saldo||0),0);
+
+  _set('relTotalDevido', Utils.formatCurrency(totalDevido));
+  _set('relComSaldo',    comSaldo.length);
+  _set('relQuitados',    quitados.length);
+  _set('relBloqueados',  bloqueados.length);
+  _set('relData',        Utils.today());
+
+  const listaEl = document.getElementById('relLista');
+  if (listaEl) {
+    const sorted = [...clientes].sort((a,b)=>(b.saldo||0)-(a.saldo||0));
+    listaEl.innerHTML = sorted.map(c => {
+      const saldo   = c.saldo||0;
+      const quitado = saldo<=0;
+      return `<div class="flex items-center justify-between bg-slate-900/60 border border-white/5 rounded-xl px-3 py-2.5">
+        <div class="flex items-center gap-2">
+          <div class="w-7 h-7 rounded-lg bg-slate-800 flex items-center justify-center font-black text-xs text-slate-400">${(c.nome||'?').charAt(0).toUpperCase()}</div>
+          <div>
+            <p class="text-[10px] font-black text-white">${c.nome}</p>
+            ${c.limite>0?`<p class="text-[8px] text-amber-400 font-bold">Limite: ${Utils.formatCurrency(c.limite)}</p>`:''}
+          </div>
+        </div>
+        <span class="badge ${c.bloqueado?'b-amber':quitado?'b-green':'b-red'} text-[8px]">${c.bloqueado?'Bloqueado':quitado?'Quitado':Utils.formatCurrency(saldo)}</span>
+      </div>`;
+    }).join('') || '<p class="text-[9px] text-slate-600 text-center py-4 font-bold">Nenhum cliente</p>';
+  }
+  UIService.openModal('modalRelatorio');
+}
+
+function _gerarTextoRelatorio() {
+  const clientes   = Store.getFiado();
+  const comSaldo   = clientes.filter(c=>(c.saldo||0)>0);
+  const totalDevido= comSaldo.reduce((s,c)=>s+(c.saldo||0),0);
+  const cfg  = Store.getConfig();
+  const nome = cfg?.nome||'CH Geladas';
+  const sep  = '═'.repeat(42); const sep2='─'.repeat(42);
+  let txt = `${sep}\n  ${nome} — RELATÓRIO DE FIADO\n  ${Utils.today()}\n${sep}\n\n`;
+  txt += `Total devido:    ${Utils.formatCurrency(totalDevido)}\n`;
+  txt += `Com saldo:       ${comSaldo.length}\n`;
+  txt += `Quitados:        ${clientes.filter(c=>(c.saldo||0)<=0).length}\n`;
+  txt += `Bloqueados:      ${clientes.filter(c=>c.bloqueado).length}\n\n`;
+  if (comSaldo.length>0) {
+    txt += `${sep2}\nCLIENTES COM SALDO\n${sep2}\n`;
+    [...comSaldo].sort((a,b)=>(b.saldo||0)-(a.saldo||0)).forEach(c => {
+      txt += `\n  ${c.nome}\n`;
+      if (c.telefone) txt += `  Tel: ${c.telefone}\n`;
+      txt += `  Saldo: ${Utils.formatCurrency(c.saldo||0)}`;
+      if (c.limite>0) txt += `  (Limite: ${Utils.formatCurrency(c.limite)})`;
+      txt += '\n';
+    });
+  }
+  txt += `\n${sep}\nGerado por ${nome} PDV\n${sep}\n`;
+  return txt;
+}
+
+function copiarRelatorio() { Utils.copyToClipboard(_gerarTextoRelatorio()).then(()=>UIService.showToast('Copiado!','','success')); }
+function baixarRelatorio()  { Utils.downloadBlob(_gerarTextoRelatorio(),'text/plain;charset=utf-8;',`relatorio_fiado_${Utils.todayISO()}.txt`); UIService.showToast('Salvo!','','success'); }
+
+function _set(id,val) { const el=document.getElementById(id); if(el) el.textContent=val; }
+
+/* ═══════ ADM — CONTROLES ═══════ */
+function zerarSaldoCliente() {
+  if (!AuthService.isAdmin()) return;
+  const c = Store.getFiado().find(x=>x.id===_clienteAtualId);
+  if (!c) return;
+  if (!confirm(`Zerar saldo de ${c.nome}? (${Utils.formatCurrency(c.saldo||0)})`)) return;
+  Store.mutateFiado(fiado => {
+    const cl = fiado.find(x=>x.id===_clienteAtualId);
+    if (!cl) return;
+    cl.movimentacoes = cl.movimentacoes||[];
+    cl.movimentacoes.unshift({ id:Utils.generateId(), tipo:'ajuste_adm', descricao:'Zeragem ADM', valor:cl.saldo||0, criadoEm:new Date().toISOString() });
+    cl.saldo    = 0;
+    cl.bloqueado= false;
+  });
+  UIService.showToast('Saldo zerado','','warning');
+  renderDetalhe();
+}
+
+function apagarMovimentacao(movId) {
+  if (!AuthService.isAdmin()) return;
+  if (!confirm('Apagar esta movimentação?')) return;
+  Store.mutateFiado(fiado => {
+    const c = fiado.find(x=>x.id===_clienteAtualId);
+    if (!c || !Array.isArray(c.movimentacoes)) return;
+    const idx = c.movimentacoes.findIndex(m=>m.id===movId);
+    if (idx>=0) c.movimentacoes.splice(idx,1);
+  });
+  UIService.showToast('Movimentação apagada','','warning');
+  renderDetalhe();
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  if (AuthService.isLogged()) {
+    document.getElementById('lock').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    init();
+  }
+});
+</script>
+</body>
+</html>
