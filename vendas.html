@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<link rel="manifest" href="./manifest.json">
+<meta name="theme-color" content="#04060d">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="CH Geladas">
+<title>Vendas — CH Geladas</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
+:root{--primary:#3b82f6;--bg:#060810;--surface:#0d1117;--card:#111827;--border:rgba(255,255,255,0.06);--emerald:#10b981;--amber:#f59e0b;--red:#ef4444;}
+*{box-sizing:border-box;}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:#f1f5f9;min-height:100vh;user-select:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;}
+body{background-image:radial-gradient(ellipse at 20% 50%,rgba(59,130,246,.04) 0%,transparent 60%);}
+#lock{position:fixed;inset:0;z-index:9999;background:radial-gradient(ellipse at 50% 40%,#0f1a2e 0%,#060810 70%);display:flex;align-items:center;justify-content:center;}
+#lock.hidden{display:none;}
+.modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:1rem;background:rgba(0,0,0,.8);opacity:0;visibility:hidden;pointer-events:none;transition:opacity .2s,visibility .2s;}
+.modal.open{opacity:1;visibility:visible;pointer-events:auto;}
+.modal.open>.modal-box{animation:mIn .22s cubic-bezier(.34,1.56,.64,1) forwards;}
+@keyframes mIn{from{opacity:0;transform:scale(.93) translateY(8px);}to{opacity:1;transform:scale(1) translateY(0);}}
+.modal-box{background:rgba(13,17,23,.98);border:1px solid rgba(255,255,255,.09);border-radius:2rem;width:100%;box-shadow:0 32px 64px rgba(0,0,0,.6);}
+.inp{font-size:16px!important;padding:12px 14px;color:#fff;background:#1e293b;border:2px solid #334155;border-radius:.75rem;width:100%;outline:none;transition:all .2s;font-family:inherit;}
+.inp:focus{border-color:#3b82f6!important;box-shadow:0 0 0 4px rgba(59,130,246,.2)!important;background:#0f172a;}
+.inp::placeholder{color:#64748b;}
+.label{color:#60a5fa;font-size:.62rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;margin-bottom:.35rem;display:block;}
+.prod-card{background:linear-gradient(145deg,rgba(13,17,23,.98),rgba(9,12,18,1));border:1.5px solid rgba(255,255,255,.06);border-left:3px solid var(--primary);border-radius:1.25rem;transition:all .18s;position:relative;padding:.875rem;}
+.prod-card:hover{border-color:rgba(59,130,246,.3);transform:translateY(-1px);}
+.prod-card.esgotado{border-left-color:#374151;opacity:.4;}
+.btn-un{border-radius:.75rem;padding:.55rem .4rem;flex:1;transition:all .15s;cursor:pointer;background:rgba(59,130,246,.1);border:1.5px solid rgba(59,130,246,.2);}
+.btn-un:hover{background:rgba(59,130,246,.25);}
+.btn-pk{border-radius:.75rem;padding:.55rem .4rem;flex:1;transition:all .15s;cursor:pointer;background:rgba(245,158,11,.1);border:1.5px solid rgba(245,158,11,.2);}
+.btn-pk:hover{background:rgba(245,158,11,.25);}
+.btn-un:active,.btn-pk:active{transform:scale(.94);}
+.btn-un:disabled,.btn-pk:disabled{opacity:.3;cursor:not-allowed;transform:none!important;}
+@keyframes flashBlue{0%{box-shadow:0 0 0 0 rgba(59,130,246,.8);}60%{box-shadow:0 0 0 12px rgba(59,130,246,0);}100%{box-shadow:0 0 0 0 rgba(59,130,246,0);}}
+@keyframes flashAmber{0%{box-shadow:0 0 0 0 rgba(245,158,11,.8);}60%{box-shadow:0 0 0 12px rgba(245,158,11,0);}100%{box-shadow:0 0 0 0 rgba(245,158,11,0);}}
+.flash-blue{animation:flashBlue .35s ease-out;}
+.flash-amber{animation:flashAmber .35s ease-out;}
+.cart-item{background:rgba(13,17,23,.7);border:1px solid rgba(255,255,255,.06);border-radius:1rem;padding:.75rem;display:flex;align-items:center;gap:.75rem;}
+.qty-btn{width:1.75rem;height:1.75rem;border-radius:.5rem;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.9rem;cursor:pointer;transition:all .15s;}
+.badge{display:inline-flex;align-items:center;border-radius:9999px;font-size:.6rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;padding:.2rem .55rem;}
+.b-blue{background:rgba(59,130,246,.15);color:#60a5fa;}
+.b-green{background:rgba(16,185,129,.15);color:#34d399;}
+.b-amber{background:rgba(245,158,11,.15);color:#fbbf24;}
+.b-red{background:rgba(239,68,68,.15);color:#f87171;}
+.btn-p{background:#2563eb;color:#fff;border-radius:.875rem;font-weight:800;font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;padding:.875rem 1.5rem;transition:all .2s;border:none;cursor:pointer;}
+.btn-p:hover{background:#3b82f6;}
+.btn-p:disabled{opacity:.4;cursor:not-allowed;}
+.btn-s{background:rgba(255,255,255,.05);color:#94a3b8;border:1px solid rgba(255,255,255,.08);border-radius:.875rem;font-weight:700;font-size:.7rem;text-transform:uppercase;padding:.875rem 1.5rem;transition:all .2s;cursor:pointer;}
+.btn-s:hover{background:rgba(255,255,255,.09);color:#f1f5f9;}
+#floatCart{position:fixed;bottom:1.5rem;right:1rem;z-index:50;opacity:0;pointer-events:none;transition:opacity .3s,transform .3s;transform:translateY(8px);}
+#floatCart.show{opacity:1;pointer-events:auto;transform:translateY(0);}
+#cartDrawer{position:fixed;inset:0;z-index:60;}
+#cartDrawerBg{position:absolute;inset:0;background:rgba(0,0,0,.7);}
+#cartDrawerPanel{position:absolute;bottom:0;left:0;right:0;background:#0d1117;border-top:1px solid rgba(255,255,255,.08);border-radius:2rem 2rem 0 0;max-height:88vh;display:flex;flex-direction:column;transition:transform .3s;transform:translateY(100%);}
+#cartDrawer.open #cartDrawerPanel{transform:translateY(0);}
+#toast{min-width:220px;position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%) translateY(4rem);opacity:0;pointer-events:none;z-index:200;transition:opacity .25s,transform .25s;background:rgba(13,17,23,.98);border:1px solid rgba(255,255,255,.09);border-radius:1.25rem;padding:1rem 1.25rem;display:flex;align-items:center;gap:.75rem;box-shadow:0 24px 48px rgba(0,0,0,.5);}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.scroll::-webkit-scrollbar{width:3px;}
+.scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:10px;}
+.no-scroll{-ms-overflow-style:none;scrollbar-width:none;}
+.no-scroll::-webkit-scrollbar{display:none;}
+.adm-only{display:none;}
+body.is-admin .adm-only{display:block;}
+body.is-admin .adm-flex{display:flex!important;}
+.cat-btn{padding:.35rem .875rem;border-radius:9999px;font-size:.65rem;font-weight:800;text-transform:uppercase;letter-spacing:.05em;border:1.5px solid rgba(255,255,255,.08);background:transparent;color:#64748b;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.cat-btn.active{background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.4);color:#60a5fa;}
+.cli-opt{padding:.75rem 1rem;border-radius:.875rem;cursor:pointer;border:1.5px solid rgba(255,255,255,.06);background:rgba(13,17,23,.7);transition:all .15s;}
+.cli-opt:hover{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.06);}
+</style>
+</head>
+<body>
+
+<!-- LOCK -->
+<div id="lock">
+  <div style="background:rgba(13,17,23,.95);border:1px solid rgba(255,255,255,.08);border-radius:2.5rem;padding:2.5rem;width:100%;max-width:360px;margin:0 1rem;text-align:center;box-shadow:0 40px 80px rgba(0,0,0,.8);">
+    <div class="text-5xl mb-4">🍺</div>
+    <h1 class="text-2xl font-black mb-1 uppercase tracking-tight">CH <span class="text-blue-400">GELADAS</span></h1>
+    <p class="text-[9px] text-slate-600 font-bold uppercase tracking-widest mb-8">Módulo de Vendas</p>
+    <input type="password" id="pinInput" autocomplete="current-password" inputmode="numeric"
+      class="w-full bg-slate-950 border-2 border-slate-800 focus:border-blue-500 p-5 rounded-2xl text-center text-2xl outline-none text-white tracking-[.4em] transition-all font-mono mb-4"
+      placeholder="· · · · ·" maxlength="8">
+    <div id="lockError" class="hidden text-[10px] text-red-400 font-bold mb-3"></div>
+    <button onclick="doLogin()" class="w-full bg-blue-600 hover:bg-blue-500 py-4 rounded-xl font-black uppercase text-xs tracking-widest transition-all">
+      <i class="fas fa-unlock-alt mr-2"></i>Entrar
+    </button>
+    <div class="mt-8"><a href="index.html" class="text-[9px] text-slate-700 hover:text-slate-500 font-bold uppercase tracking-widest transition-colors">← Hub Principal</a></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden flex flex-col min-h-screen">
+  <header class="sticky top-0 z-40 px-4 py-3 flex justify-between items-center" style="background:rgba(6,8,16,.96);border-bottom:1px solid rgba(255,255,255,.04);">
+    <div class="flex items-center gap-3">
+      <span class="text-2xl">🍺</span>
+      <div>
+        <div class="flex items-center gap-2">
+          <h1 class="text-[10px] font-black uppercase tracking-widest text-blue-400">Vendas PDV</h1>
+          <span id="roleTag" class="badge b-blue hidden"></span>
+        </div>
+        <p id="clock" class="text-[9px] font-mono text-slate-600 mt-0.5">00:00:00</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <button id="alertBtn" onclick="verEstoqueBaixo()" class="hidden items-center gap-1.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3 py-1.5 rounded-lg text-[9px] font-black uppercase transition-all hover:bg-amber-500/20">
+        <i class="fas fa-exclamation-triangle text-[8px]"></i><span id="alertCount">0</span>
+      </button>
+      <div id="syncDot" class="w-2 h-2 rounded-full bg-emerald-400" title="Sincronizado" style="display:none;"></div>
+      <button onclick="abrirRelatorio()" class="w-8 h-8 rounded-lg bg-slate-900 border border-white/5 flex items-center justify-center text-slate-500 hover:text-blue-400 transition-all">
+        <i class="fas fa-chart-bar text-xs"></i>
+      </button>
+      <button onclick="logout()" class="w-8 h-8 rounded-lg bg-slate-900 border border-white/5 flex items-center justify-center text-slate-500 hover:text-red-400 transition-all">
+        <i class="fas fa-power-off text-xs"></i>
+      </button>
+    </div>
+  </header>
+
+  <main class="flex-1 p-3 lg:p-4 max-w-7xl mx-auto w-full pb-28 lg:pb-6">
+    <div class="lg:grid lg:grid-cols-12 lg:gap-4">
+      <!-- CATÁLOGO -->
+      <div class="lg:col-span-8 flex flex-col gap-3">
+        <div class="flex gap-2">
+          <div class="relative flex-1">
+            <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs pointer-events-none"></i>
+            <input type="text" id="searchProd" oninput="clearTimeout(this._t);this._t=setTimeout(renderCatalogo,160)" class="inp !pl-9" placeholder="Pesquisar produto...">
+          </div>
+        </div>
+        <div id="catRow" class="flex gap-2 overflow-x-auto no-scroll pb-1"></div>
+        <div id="catalogo" class="grid grid-cols-2 gap-2 overflow-y-auto scroll" style="max-height:68vh"></div>
+      </div>
+
+      <!-- CARRINHO desktop -->
+      <div class="lg:col-span-4 hidden lg:block">
+        <div class="sticky flex flex-col overflow-hidden" style="top:68px;max-height:calc(100vh - 84px);background:rgba(17,24,39,.98);border:1px solid rgba(255,255,255,.07);border-radius:2rem;box-shadow:0 24px 48px rgba(0,0,0,.4);">
+          <div class="px-5 pt-5 pb-3 border-b border-white/5 flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <i class="fas fa-shopping-cart text-blue-400 text-sm"></i>
+              <span class="text-[9px] font-black uppercase tracking-wider text-blue-400">Carrinho</span>
+              <span id="cartBadge" class="hidden badge b-blue">0</span>
+            </div>
+            <button onclick="limparCarrinho()" id="btnLimpar" class="hidden w-6 h-6 rounded-md bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center justify-center transition-all">
+              <i class="fas fa-trash text-[9px]"></i>
+            </button>
+          </div>
+          <div id="cartLista" class="flex-1 overflow-y-auto scroll p-4 space-y-2 min-h-[200px]"></div>
+          <div class="p-4 border-t border-white/5 bg-slate-950/50">
+            <div class="flex justify-between items-baseline mb-3">
+              <span class="text-[9px] text-slate-500 uppercase font-bold tracking-wider">Total</span>
+              <span id="cartTotal" class="text-3xl font-black text-white tracking-tight">R$ 0,00</span>
+            </div>
+            <div id="quickPay" class="hidden grid grid-cols-3 gap-1.5 mb-2">
+              <button onclick="quickPagamento('Dinheiro')" class="py-3 rounded-xl bg-emerald-600/20 hover:bg-emerald-600/35 border border-emerald-500/25 text-emerald-300 font-black text-[9px] uppercase flex flex-col items-center gap-0.5 transition-all active:scale-95"><i class="fas fa-money-bill-wave text-sm"></i>Dinheiro</button>
+              <button onclick="quickPagamento('Pix')" class="py-3 rounded-xl bg-blue-600/20 hover:bg-blue-600/35 border border-blue-500/25 text-blue-300 font-black text-[9px] uppercase flex flex-col items-center gap-0.5 transition-all active:scale-95"><i class="fas fa-qrcode text-sm"></i>Pix</button>
+              <button onclick="quickPagamento('Cartão')" class="py-3 rounded-xl bg-purple-600/20 hover:bg-purple-600/35 border border-purple-500/25 text-purple-300 font-black text-[9px] uppercase flex flex-col items-center gap-0.5 transition-all active:scale-95"><i class="fas fa-credit-card text-sm"></i>Cartão</button>
+            </div>
+            <button onclick="abrirPagamento()" id="btnFinalizar" disabled class="w-full py-3 rounded-xl bg-slate-800 text-slate-500 font-black uppercase text-[10px] tracking-widest transition-all cursor-not-allowed">
+              <i class="fas fa-lock mr-2"></i>Selecione produtos
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- FLOAT CART (mobile) -->
+<button id="floatCart" onclick="abrirDrawer()" class="lg:hidden bg-blue-600 text-white rounded-2xl px-4 py-3 font-black text-xs uppercase shadow-2xl shadow-blue-500/40 border border-blue-400/20 flex items-center gap-3">
+  <div class="relative">
+    <i class="fas fa-shopping-cart text-base"></i>
+    <span id="floatBadge" class="absolute -top-2 -right-2 w-4 h-4 bg-white text-blue-600 rounded-full text-[8px] font-black flex items-center justify-center">0</span>
+  </div>
+  <div class="flex flex-col items-start leading-none">
+    <span id="floatCount" class="text-[8px] text-blue-200 font-bold uppercase">0 itens</span>
+    <span id="floatTotal" class="text-sm font-black">R$ 0,00</span>
+  </div>
+  <i class="fas fa-chevron-up text-xs text-blue-300"></i>
+</button>
+
+<!-- CART DRAWER (mobile) -->
+<div id="cartDrawer" onclick="fecharDrawer()">
+  <div id="cartDrawerBg"></div>
+  <div id="cartDrawerPanel" onclick="event.stopPropagation()">
+    <div class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-white/5">
+      <div class="flex items-center gap-2">
+        <i class="fas fa-shopping-cart text-blue-400"></i>
+        <span class="text-[10px] font-black uppercase tracking-wider text-blue-400">Carrinho</span>
+        <span id="cartBadgeMob" class="hidden badge b-blue text-[9px]">0</span>
+      </div>
+      <div class="flex items-center gap-3">
+        <button onclick="limparCarrinho()" id="btnLimparMob" class="hidden text-red-400 text-[10px] font-black uppercase"><i class="fas fa-trash mr-1"></i>Limpar</button>
+        <button onclick="fecharDrawer()" class="w-8 h-8 rounded-xl bg-slate-800 text-slate-400 flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
+      </div>
+    </div>
+    <div id="cartListaMob" class="flex-1 overflow-y-auto scroll p-4 space-y-2"></div>
+    <div class="p-4 border-t border-white/5" style="background:#0a0d14;">
+      <div class="flex items-center justify-between mb-3">
+        <p class="text-[9px] text-slate-500 uppercase font-bold">Total</p>
+        <span id="cartTotalMob" class="text-2xl font-black text-white">R$ 0,00</span>
+      </div>
+      <div id="quickPayMob" class="hidden grid grid-cols-3 gap-2 mb-2">
+        <button onclick="quickPagamento('Dinheiro');fecharDrawer()" class="py-3.5 rounded-xl bg-emerald-600/20 border border-emerald-500/25 text-emerald-300 font-black text-[10px] uppercase flex flex-col items-center gap-1 active:scale-95 transition-all"><i class="fas fa-money-bill-wave text-base"></i>Dinheiro</button>
+        <button onclick="quickPagamento('Pix');fecharDrawer()" class="py-3.5 rounded-xl bg-blue-600/20 border border-blue-500/25 text-blue-300 font-black text-[10px] uppercase flex flex-col items-center gap-1 active:scale-95 transition-all"><i class="fas fa-qrcode text-base"></i>Pix</button>
+        <button onclick="quickPagamento('Cartão');fecharDrawer()" class="py-3.5 rounded-xl bg-purple-600/20 border border-purple-500/25 text-purple-300 font-black text-[10px] uppercase flex flex-col items-center gap-1 active:scale-95 transition-all"><i class="fas fa-credit-card text-base"></i>Cartão</button>
+      </div>
+      <button onclick="abrirPagamento();fecharDrawer()" id="btnFinalizarMob" disabled class="w-full py-3 rounded-xl bg-slate-800 text-slate-500 font-black uppercase text-[10px] tracking-widest transition-all cursor-not-allowed">
+        <i class="fas fa-lock mr-2"></i>Selecione produtos
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL PAGAMENTO ══ -->
+<div id="modalPagamento" class="modal">
+  <div class="modal-box max-w-sm p-8">
+    <div class="text-center mb-6">
+      <div class="w-14 h-14 bg-blue-500/20 text-blue-400 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">💳</div>
+      <h2 class="text-2xl font-black mb-1">Finalizar Venda</h2>
+      <p id="pgtoResumo" class="text-slate-400 text-sm">Escolha o pagamento</p>
+    </div>
+    <!-- Desconto -->
+    <div class="mb-4 bg-slate-900/60 rounded-2xl p-4 border border-white/5">
+      <label class="label !text-amber-400">Desconto (R$)</label>
+      <input type="number" id="descontoInput" class="inp text-lg font-black text-amber-400" placeholder="0,00" step="0.01" min="0" oninput="calcDesconto()">
+      <div id="descBox" class="hidden mt-2 flex justify-between text-[10px] font-bold text-amber-400">
+        <span>Desconto:</span><span id="descVal">R$ 0,00</span>
+      </div>
+    </div>
+    <!-- Formas simples -->
+    <div class="grid grid-cols-2 gap-2 mb-3">
+      <button onclick="iniciarDinheiro()" class="flex flex-col items-center gap-2 py-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 hover:bg-emerald-500/25 text-emerald-400 font-black uppercase text-[10px] transition-all active:scale-95"><i class="fas fa-money-bill-wave text-2xl"></i>Dinheiro</button>
+      <button onclick="confirmarPagamento('Pix')" class="flex flex-col items-center gap-2 py-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 hover:bg-blue-500/25 text-blue-400 font-black uppercase text-[10px] transition-all active:scale-95"><i class="fas fa-qrcode text-2xl"></i>Pix</button>
+      <button onclick="confirmarPagamento('Débito')" class="flex flex-col items-center gap-2 py-4 rounded-2xl bg-purple-500/10 border border-purple-500/20 hover:bg-purple-500/25 text-purple-400 font-black uppercase text-[10px] transition-all active:scale-95"><i class="fas fa-credit-card text-2xl"></i>Débito</button>
+      <button onclick="confirmarPagamento('Crédito')" class="flex flex-col items-center gap-2 py-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/25 text-amber-400 font-black uppercase text-[10px] transition-all active:scale-95"><i class="fas fa-credit-card text-2xl"></i>Crédito</button>
+    </div>
+    <!-- Misto -->
+    <button onclick="abrirPagamentoMisto()" class="w-full py-3 rounded-xl bg-slate-700/50 border border-white/10 text-slate-300 hover:bg-slate-700 font-black uppercase text-[10px] transition-all mb-2 active:scale-95"><i class="fas fa-layer-group mr-2"></i>Pagamento Misto</button>
+    <!-- Fiado -->
+    <button onclick="abrirSelecionarCliente()" class="w-full py-3.5 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 font-black uppercase text-[10px] transition-all mb-3 active:scale-95"><i class="fas fa-handshake mr-2"></i>Fiado</button>
+    <button onclick="UIService.closeModal('modalPagamento')" class="w-full py-3 rounded-xl bg-slate-800 text-slate-400 font-black uppercase text-[10px] transition-all">Cancelar</button>
+  </div>
+</div>
+
+<!-- ══ MODAL TROCO ══ -->
+<div id="modalTroco" class="modal">
+  <div class="modal-box max-w-sm p-8">
+    <div class="text-center mb-5">
+      <div class="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">💵</div>
+      <h2 class="text-xl font-black">Pagamento em Dinheiro</h2>
+      <p id="trocoTotalLabel" class="text-slate-400 text-sm mt-1"></p>
+    </div>
+    <div class="mb-4">
+      <label class="label !text-emerald-400">Valor Recebido (R$)</label>
+      <input type="number" id="trocoRecebido" class="inp text-2xl font-black text-emerald-400 text-center" placeholder="0,00" step="0.01" min="0" oninput="calcTroco()">
+    </div>
+    <!-- Sugestões de notas -->
+    <div id="trocoSugestoes" class="grid grid-cols-4 gap-2 mb-4"></div>
+    <!-- Resultado -->
+    <div id="trocoResultado" class="rounded-2xl p-4 text-center mb-4 bg-slate-900/60 border border-white/5">
+      <p id="trocoLabel" class="text-[9px] uppercase font-black tracking-widest mb-1 text-slate-500">Aguardando valor</p>
+      <p id="trocoValor" class="text-3xl font-black text-slate-400">—</p>
+    </div>
+    <button id="btnConfirmarTroco" onclick="confirmarDinheiro()" disabled class="w-full py-3.5 rounded-xl bg-slate-800 text-slate-500 font-black uppercase text-xs tracking-widest transition-all cursor-not-allowed mb-2">
+      <i class="fas fa-check mr-2"></i>Confirmar
+    </button>
+    <button onclick="UIService.closeModal('modalTroco');UIService.openModal('modalPagamento')" class="w-full py-3 rounded-xl bg-slate-900 text-slate-400 font-black uppercase text-[10px]">← Voltar</button>
+  </div>
+</div>
+
+<!-- ══ MODAL PAGAMENTO MISTO ══ -->
+<div id="modalMisto" class="modal">
+  <div class="modal-box max-w-sm p-8">
+    <div class="text-center mb-5">
+      <div class="w-12 h-12 bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">🔀</div>
+      <h2 class="text-xl font-black">Pagamento Misto</h2>
+      <p id="mistoTotalLabel" class="text-slate-400 text-sm mt-1"></p>
+    </div>
+    <div class="mb-4">
+      <label class="label">Valor em Dinheiro (R$)</label>
+      <input type="number" id="mistoDinheiro" class="inp text-xl font-black text-emerald-400" placeholder="0,00" step="0.01" min="0" oninput="calcMisto()">
+    </div>
+    <div id="mistoRestanteBox" class="hidden bg-slate-900/60 border border-white/5 rounded-xl p-3 mb-4 text-center">
+      <p class="text-[9px] text-slate-500 font-bold uppercase mb-1">Restante no Cartão/Pix</p>
+      <p id="mistoRestante" class="text-2xl font-black text-blue-400">R$ 0,00</p>
+    </div>
+    <div class="grid grid-cols-3 gap-2 mb-4">
+      <button onclick="confirmarMisto('Pix')" id="btnMistoPix" disabled class="py-3 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 font-black text-[9px] uppercase flex flex-col items-center gap-1 active:scale-95 transition-all disabled:opacity-30"><i class="fas fa-qrcode text-base"></i>+ Pix</button>
+      <button onclick="confirmarMisto('Débito')" id="btnMistoDebito" disabled class="py-3 rounded-xl bg-purple-500/10 border border-purple-500/20 text-purple-400 font-black text-[9px] uppercase flex flex-col items-center gap-1 active:scale-95 transition-all disabled:opacity-30"><i class="fas fa-credit-card text-base"></i>+ Débito</button>
+      <button onclick="confirmarMisto('Crédito')" id="btnMistoCredito" disabled class="py-3 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 font-black text-[9px] uppercase flex flex-col items-center gap-1 active:scale-95 transition-all disabled:opacity-30"><i class="fas fa-credit-card text-base"></i>+ Crédito</button>
+    </div>
+    <button onclick="UIService.closeModal('modalMisto');UIService.openModal('modalPagamento')" class="w-full py-3 rounded-xl bg-slate-900 text-slate-400 font-black uppercase text-[10px]">← Voltar</button>
+  </div>
+</div>
+
+<!-- ══ MODAL SELECIONAR CLIENTE FIADO ══ -->
+<div id="modalFiadoCliente" class="modal">
+  <div class="modal-box max-w-sm p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-sm font-black text-red-400 flex items-center gap-2"><i class="fas fa-handshake"></i> Venda no Fiado</h3>
+      <button onclick="UIService.closeModal('modalFiadoCliente');UIService.openModal('modalPagamento')" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
+    </div>
+    <p class="text-[9px] text-slate-500 font-bold uppercase mb-3">Selecione o cliente</p>
+    <div class="relative mb-3">
+      <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs pointer-events-none"></i>
+      <input type="text" id="buscaClienteFiado" oninput="renderClientesFiado()" class="inp !pl-9 !py-2.5" placeholder="Buscar cliente...">
+    </div>
+    <div id="listaClientesFiado" class="space-y-2 max-h-72 overflow-y-auto scroll"></div>
+  </div>
+</div>
+
+<!-- ══ MODAL RECIBO ══ -->
+<div id="modalVenda" class="modal">
+  <div class="modal-box max-w-sm p-0 overflow-hidden">
+    <div class="bg-emerald-500/10 border-b border-emerald-500/20 px-6 pt-6 pb-4 text-center">
+      <div class="w-12 h-12 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">✓</div>
+      <h2 class="text-lg font-black text-white">Venda Concluída!</h2>
+    </div>
+    <div class="px-5 py-4 border-b border-white/5">
+      <div id="recItens" class="space-y-1.5 mb-3 max-h-40 overflow-y-auto scroll"></div>
+      <div id="recDescRow" class="hidden flex justify-between text-[9px] font-bold text-amber-400 mb-1">
+        <span>Desconto</span><span id="recDesc">-R$ 0,00</span>
+      </div>
+      <!-- Troco no recibo -->
+      <div id="recTrocoRow" class="hidden flex justify-between text-[9px] font-bold text-emerald-400 mb-1">
+        <span>Troco</span><span id="recTroco"></span>
+      </div>
+      <div class="flex justify-between items-center bg-slate-900/60 rounded-xl px-3 py-2.5 mt-2">
+        <span class="text-[10px] font-black uppercase text-slate-400">Total</span>
+        <span id="recTotal" class="text-xl font-black text-white">R$ 0,00</span>
+      </div>
+      <p id="recPgto" class="text-[9px] font-bold text-blue-400 text-right mt-1.5"></p>
+      <p id="recHora" class="text-[8px] font-bold text-slate-700 text-right mt-1"></p>
+    </div>
+    <div class="p-4 space-y-2">
+      <button onclick="enviarWhatsapp()" class="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white py-3 rounded-xl font-black uppercase text-xs flex items-center justify-center gap-2 transition-all active:scale-95"><i class="fab fa-whatsapp text-base"></i>Enviar WhatsApp</button>
+      <div class="grid grid-cols-2 gap-2">
+        <button onclick="copiarRecibo()" class="py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-black uppercase text-[10px] flex items-center justify-center gap-1.5 active:scale-95"><i class="fas fa-copy text-xs"></i>Copiar</button>
+        <button onclick="baixarRecibo()" class="py-3 rounded-xl bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border border-blue-500/20 font-black uppercase text-[10px] flex items-center justify-center gap-1.5 active:scale-95"><i class="fas fa-download text-xs"></i>TXT</button>
+      </div>
+      <!-- Cancelar venda -->
+      <button onclick="cancelarUltimaVenda()" class="w-full py-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 hover:bg-red-500/20 font-black uppercase text-[10px] transition-all active:scale-95">
+        <i class="fas fa-times-circle mr-2"></i>Cancelar Esta Venda
+      </button>
+      <button onclick="UIService.closeModal('modalVenda')" class="w-full bg-slate-900 hover:bg-slate-800 text-slate-400 py-3 rounded-xl font-black uppercase text-xs transition-all active:scale-95">Nova Venda</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL RELATÓRIO ══ -->
+<div id="modalRelatorio" class="modal">
+  <div class="modal-box max-w-sm p-0 overflow-hidden">
+    <div class="p-5 border-b border-white/5 flex items-center justify-between">
+      <div>
+        <h3 class="text-sm font-black text-blue-400 flex items-center gap-2"><i class="fas fa-chart-bar"></i> Relatório de Vendas</h3>
+        <p id="relData" class="text-[9px] text-slate-500 font-bold mt-0.5"></p>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="copiarRelatorio()" class="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 flex items-center justify-center" title="Copiar"><i class="fas fa-copy text-sm"></i></button>
+        <button onclick="enviarRelatorioTelegram()" class="w-8 h-8 rounded-lg bg-sky-600/20 text-sky-400 hover:bg-sky-600/30 flex items-center justify-center" title="Telegram"><i class="fab fa-telegram text-sm"></i></button>
+        <button onclick="baixarRelatorio()" class="w-8 h-8 rounded-lg bg-violet-600/20 text-violet-400 hover:bg-violet-600/30 flex items-center justify-center" title="Baixar TXT"><i class="fas fa-file-alt text-sm"></i></button>
+        <button onclick="UIService.closeModal('modalRelatorio')" class="w-8 h-8 rounded-lg bg-slate-800 text-slate-400 hover:text-white flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
+      </div>
+    </div>
+    <div class="overflow-y-auto scroll" style="max-height:76vh;">
+      <div class="grid grid-cols-2 gap-3 p-5 border-b border-white/5">
+        <div class="bg-slate-900/60 border border-white/5 rounded-2xl p-4 text-center">
+          <p class="text-[8px] text-slate-500 font-black uppercase tracking-widest mb-1">Faturamento</p>
+          <p id="relFaturamento" class="text-xl font-black text-white">R$ 0,00</p>
+        </div>
+        <div class="bg-slate-900/60 border border-white/5 rounded-2xl p-4 text-center">
+          <p class="text-[8px] text-slate-500 font-black uppercase tracking-widest mb-1">Lucro</p>
+          <p id="relLucro" class="text-xl font-black text-emerald-400">R$ 0,00</p>
+        </div>
+        <div class="bg-slate-900/60 border border-white/5 rounded-2xl p-4 text-center">
+          <p class="text-[8px] text-slate-500 font-black uppercase tracking-widest mb-1">Vendas</p>
+          <p id="relQtd" class="text-xl font-black text-blue-400">0</p>
+        </div>
+        <div class="bg-slate-900/60 border border-white/5 rounded-2xl p-4 text-center">
+          <p class="text-[8px] text-slate-500 font-black uppercase tracking-widest mb-1">Ticket Médio</p>
+          <p id="relTicket" class="text-xl font-black text-amber-400">R$ 0,00</p>
+        </div>
+      </div>
+      <div class="p-5 border-b border-white/5">
+        <p class="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3">Por Forma de Pagamento</p>
+        <div id="relPorPgto" class="space-y-2"></div>
+      </div>
+      <div class="p-5 border-b border-white/5">
+        <p class="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3">Top Produtos</p>
+        <div id="relTopProd" class="space-y-2"></div>
+      </div>
+      <div class="p-5">
+        <p class="text-[8px] text-slate-500 uppercase font-black tracking-widest mb-3">Vendas de Hoje</p>
+        <div id="relHistorico" class="space-y-2 max-h-60 overflow-y-auto scroll"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast">
+  <div id="toastIcon" class="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-black"></div>
+  <div><span id="toastMsg" class="text-[11px] font-black uppercase tracking-wide block"></span><span id="toastSub" class="text-[9px] text-slate-500 font-bold"></span></div>
+</div>
+
+<script src="core.js"></script>
+  <script src="./services/syncService.js"></script>
+  <script src="./services/auditService.js"></script>
+  <script src="./services/syncMonitor.js"></script>
+  <script src="./services/backupService.js"></script>
+
+  <script src="./services/estoqueService.js"></script>
+  <script src="./services/financeiroService.js"></script>
+  <script src="./services/vendasService.js"></script>
+<script>
+'use strict';
+
+let _catAtiva   = 'TODOS';
+let _ultimaVenda = null;
+let _drawerOpen  = false;
+
+/* ══ LOGIN ══ */
+async function doLogin() {
+  const pin = document.getElementById('pinInput').value.trim();
+  const err = document.getElementById('lockError');
+  if (!pin) return;
+  const ok = await AuthService.login(pin);
+  if (ok) {
+    document.getElementById('lock').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    if (AuthService.isAdmin()) document.body.classList.add('is-admin');
+    const rt = document.getElementById('roleTag');
+    if (rt) { rt.textContent = AuthService.isAdmin() ? 'ADM' : 'PDV'; rt.classList.remove('hidden'); }
+    init();
+  } else {
+    err.textContent = 'PIN incorreto.';
+    err.classList.remove('hidden');
+    document.getElementById('pinInput').value = '';
+    document.getElementById('pinInput').focus();
+  }
+}
+document.getElementById('pinInput').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+function logout() { if (!confirm('Encerrar sessão?')) return; AuthService.logout(); location.reload(); }
+
+/* ══ INIT ══ */
+function init() {
+  UIService.startClock('clock');
+  renderCatFiltros();
+  renderCatalogo();
+  renderCart();
+  atualizarAlerta();
+  EventBus.on('store:updated', () => { renderCatalogo(); renderCart(); atualizarAlerta(); });
+  EventBus.on('cart:updated', renderCart);
+}
+
+/* ══ CATEGORIAS ══ */
+function renderCatFiltros() {
+  const cats = [...new Set(Store.getEstoque().map(p => p.categoria || '').filter(Boolean))];
+  const row  = document.getElementById('catRow');
+  if (!row || cats.length === 0) { if(row) row.innerHTML=''; return; }
+  row.innerHTML = ['TODOS', ...cats].map(c =>
+    `<button class="cat-btn ${c===_catAtiva?'active':''}" onclick="setCategoria('${c}')">${c}</button>`
+  ).join('');
+}
+function setCategoria(cat) { _catAtiva = cat; renderCatFiltros(); renderCatalogo(); }
+
+/* ══ CATÁLOGO ══ */
+function renderCatalogo() {
+  const busca = (document.getElementById('searchProd')?.value || '').toLowerCase();
+  const el = document.getElementById('catalogo');
+  if (!el) return;
+  const estoque = Store.getEstoque();
+  let prods = estoque.filter(p => {
+    const mb = !busca || (p.nome||'').toLowerCase().includes(busca);
+    const mc = _catAtiva === 'TODOS' || (p.categoria||'') === _catAtiva;
+    return mb && mc;
+  });
+  if (prods.length === 0) {
+    el.innerHTML = `<div class="col-span-2 flex flex-col items-center justify-center py-20 opacity-30">
+      <i class="fas fa-box-open text-5xl mb-4 text-slate-600"></i>
+      <p class="text-[10px] font-black uppercase tracking-widest text-slate-600">${estoque.length===0?'Sem produtos':'Nenhum produto encontrado'}</p>
+    </div>`; return;
+  }
+  el.innerHTML = prods.map(p => {
+    const esg = (p.qtdUn||0) <= 0;
+    const baixo = !esg && p.qtdUn <= (Store.getConfig()?.alertaEstoque||3);
+    return `<div class="prod-card ${esg?'esgotado':''}">
+      <div class="flex justify-between items-start mb-2">
+        <p class="text-[11px] font-black text-white leading-tight flex-1 mr-2">${p.nome}</p>
+        ${esg?'<span class="badge b-red text-[8px] flex-shrink-0">Esgotado</span>':baixo?`<span class="badge b-amber text-[8px] flex-shrink-0">${p.qtdUn} un</span>`:`<span class="text-[9px] text-slate-500 font-bold flex-shrink-0">${p.qtdUn} un</span>`}
+      </div>
+      <p class="text-base font-black text-blue-400 mb-3">${Utils.formatCurrency(p.precoUn)}</p>
+      <div class="flex gap-1.5">
+        <button class="btn-un text-[9px] font-black text-blue-300" onclick="addItem('${p.id}','UNID',${p.precoUn},event.currentTarget)" ${esg?'disabled':''}>
+          <i class="fas fa-plus text-[9px] mr-1"></i>1 un
+        </button>
+        ${(p.packs||[]).map(pk=>`<button class="btn-pk text-[9px] font-black text-amber-300" onclick="addItem('${p.id}','${pk.qtd}x',${pk.preco},event.currentTarget)" ${esg?'disabled':''}><i class="fas fa-boxes text-[9px] mr-1"></i>${pk.qtd}x</button>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+/* ══ CART ══ */
+function addItem(prodId, label, preco, btn) {
+  const prod = Store.getEstoque().find(p => p.id === prodId);
+  if (!prod || prod.qtdUn <= 0) { UIService.showToast('Esgotado', prod?.nome||'', 'error'); return; }
+  CartService.add(prod, 1, label, preco);
+  btn?.classList.add(label==='UNID'?'flash-blue':'flash-amber');
+  setTimeout(()=>btn?.classList.remove('flash-blue','flash-amber'),400);
+  UIService.showToast(prod.nome, `+1 ${label} — ${Utils.formatCurrency(preco)}`, 'success');
+}
+
+function renderCart() {
+  const items = CartService.getItems();
+  const total = CartService.getTotal();
+  const count = CartService.getCount();
+  const empty = CartService.isEmpty();
+  _renderCartList('cartLista', items);
+  _renderCartList('cartListaMob', items);
+  _setCartFooter(count, total, empty, false);
+  _setCartFooter(count, total, empty, true);
+  const floatEl = document.getElementById('floatCart');
+  if (floatEl) floatEl.classList.toggle('show', !empty);
+  _setText('floatBadge', count);
+  _setText('floatCount', `${count} ${count===1?'item':'itens'}`);
+  _setText('floatTotal', Utils.formatCurrency(total));
+}
+
+function _renderCartList(id, items) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (items.length === 0) {
+    el.innerHTML = `<div class="flex flex-col items-center justify-center py-12 opacity-20"><i class="fas fa-shopping-cart text-3xl text-slate-600 mb-3"></i><p class="text-[9px] font-black uppercase text-slate-600">Carrinho vazio</p></div>`;
+    return;
+  }
+  el.innerHTML = items.map((item,idx) => `
+    <div class="cart-item">
+      <div class="flex-1 min-w-0">
+        <p class="text-[11px] font-black text-white truncate">${item.nome}</p>
+        <p class="text-[9px] text-slate-500 font-bold">${item.label} × ${item.qtd} = ${Utils.formatCurrency(item.preco*item.qtd)}</p>
+      </div>
+      <div class="flex items-center gap-1 flex-shrink-0">
+        <button class="qty-btn bg-slate-800 text-slate-400 hover:text-red-400 hover:bg-red-500/10" onclick="CartService.updateQty(${idx},${item.qtd-1})">−</button>
+        <span class="text-[10px] font-black text-white w-5 text-center">${item.qtd}</span>
+        <button class="qty-btn bg-slate-800 text-slate-400 hover:text-emerald-400 hover:bg-emerald-500/10" onclick="CartService.updateQty(${idx},${item.qtd+1})">+</button>
+        <button class="qty-btn bg-red-500/10 text-red-400 hover:bg-red-500/20 ml-1" onclick="CartService.remove(${idx})"><i class="fas fa-times text-[9px]"></i></button>
+      </div>
+    </div>`).join('');
+}
+
+function _setCartFooter(count, total, empty, isMob) {
+  const s = isMob ? 'Mob' : '';
+  const badge  = document.getElementById('cartBadge'+s);
+  const limpar = document.getElementById('btnLimpar'+s);
+  const totalEl= document.getElementById('cartTotal'+s);
+  const quickP = document.getElementById(isMob?'quickPayMob':'quickPay');
+  const btnFin = document.getElementById(isMob?'btnFinalizarMob':'btnFinalizar');
+  if (badge)  { badge.textContent = count; badge.classList.toggle('hidden', empty); }
+  if (limpar)  limpar.classList.toggle('hidden', empty);
+  if (totalEl) totalEl.textContent = Utils.formatCurrency(total);
+  if (quickP)  quickP.classList.toggle('hidden', empty);
+  if (btnFin) {
+    btnFin.disabled = empty;
+    if (empty) {
+      btnFin.className = btnFin.className.replace('bg-blue-600 hover:bg-blue-500 text-white cursor-pointer','bg-slate-800 text-slate-500 cursor-not-allowed');
+      btnFin.innerHTML = '<i class="fas fa-lock mr-2"></i>Selecione produtos';
+    } else {
+      btnFin.className = btnFin.className.replace('bg-slate-800 text-slate-500 cursor-not-allowed','bg-blue-600 hover:bg-blue-500 text-white cursor-pointer');
+      btnFin.innerHTML = `<i class="fas fa-check mr-2"></i>Finalizar ${Utils.formatCurrency(total)}`;
+    }
+  }
+}
+
+function limparCarrinho() {
+  if (!CartService.isEmpty() && !confirm('Limpar carrinho?')) return;
+  CartService.clear();
+}
+
+/* ══ DRAWER ══ */
+function abrirDrawer() {
+  const d = document.getElementById('cartDrawer');
+  if (d) { d.style.visibility='visible'; setTimeout(()=>d.classList.add('open'),10); }
+  _drawerOpen = true;
+}
+function fecharDrawer() {
+  const d = document.getElementById('cartDrawer');
+  if (d) { d.classList.remove('open'); setTimeout(()=>{ d.style.visibility='hidden'; },300); }
+  _drawerOpen = false;
+}
+
+/* ══ PAGAMENTO ══ */
+function abrirPagamento() {
+  if (CartService.isEmpty()) return;
+  _setText('pgtoResumo', `${CartService.getCount()} itens — ${Utils.formatCurrency(CartService.getTotal())}`);
+  const di = document.getElementById('descontoInput');
+  if (di) di.value = '';
+  document.getElementById('descBox')?.classList.add('hidden');
+  UIService.openModal('modalPagamento');
+}
+
+function calcDesconto() {
+  const desc = parseFloat(document.getElementById('descontoInput')?.value)||0;
+  CartService.setDesconto(desc);
+  const box = document.getElementById('descBox');
+  const val = document.getElementById('descVal');
+  if (desc > 0) { box?.classList.remove('hidden'); if(val) val.textContent = Utils.formatCurrency(desc); }
+  else box?.classList.add('hidden');
+}
+
+function quickPagamento(forma) { CartService.setDesconto(0); finalizarVenda(forma); }
+function confirmarPagamento(forma) { UIService.closeModal('modalPagamento'); finalizarVenda(forma); }
+
+/* ══ TROCO ══ */
+function iniciarDinheiro() {
+  UIService.closeModal('modalPagamento');
+  const total = CartService.getTotal();
+  _setText('trocoTotalLabel', `Total: ${Utils.formatCurrency(total)}`);
+  const ri = document.getElementById('trocoRecebido');
+  if (ri) ri.value = '';
+  _renderSugestoes(total);
+  document.getElementById('trocoResultado')?.setAttribute('class','rounded-2xl p-4 text-center mb-4 bg-slate-900/60 border border-white/5');
+  _setText('trocoLabel','Aguardando valor');
+  _setText('trocoValor','—');
+  document.getElementById('trocoValor').className = 'text-3xl font-black text-slate-400';
+  const btn = document.getElementById('btnConfirmarTroco');
+  if (btn) { btn.disabled = true; btn.className = btn.className.replace('bg-emerald-600 text-white cursor-pointer','bg-slate-800 text-slate-500 cursor-not-allowed'); }
+  UIService.openModal('modalTroco');
+  setTimeout(()=>document.getElementById('trocoRecebido')?.focus(),200);
+}
+
+function _renderSugestoes(total) {
+  const cont = document.getElementById('trocoSugestoes');
+  if (!cont) return;
+  const notas = [2,5,10,20,50,100,200];
+  const sugest = [];
+  for (const n of notas) { if (n >= total) { sugest.push(n); if (sugest.length===4) break; } }
+  while (sugest.length < 4) { const last = sugest[sugest.length-1]||Math.ceil(total/10)*10; sugest.push(last+10); }
+  cont.innerHTML = sugest.map(v =>
+    `<button onclick="document.getElementById('trocoRecebido').value=${v};calcTroco()"
+      class="py-2 rounded-xl bg-slate-800 hover:bg-emerald-600/20 border border-white/5 hover:border-emerald-500/30 text-white font-black text-xs transition-all active:scale-95">
+      R$ ${v}
+    </button>`).join('');
+}
+
+function calcTroco() {
+  const total    = CartService.getTotal();
+  const recebido = parseFloat(document.getElementById('trocoRecebido')?.value)||0;
+  const box      = document.getElementById('trocoResultado');
+  const lbl      = document.getElementById('trocoLabel');
+  const val      = document.getElementById('trocoValor');
+  const btn      = document.getElementById('btnConfirmarTroco');
+  if (recebido <= 0) return;
+  const troco = recebido - total;
+  if (troco < 0) {
+    box.className = 'rounded-2xl p-4 text-center mb-4 bg-red-500/10 border border-red-500/20';
+    if (lbl) { lbl.textContent = 'Falta'; lbl.className = 'text-[9px] uppercase font-black tracking-widest mb-1 text-red-400'; }
+    if (val) { val.textContent = Utils.formatCurrency(Math.abs(troco)); val.className = 'text-3xl font-black text-red-400'; }
+    if (btn) { btn.disabled=true; btn.className=btn.className.replace('bg-emerald-600 text-white cursor-pointer','bg-slate-800 text-slate-500 cursor-not-allowed'); }
+  } else if (troco === 0) {
+    box.className = 'rounded-2xl p-4 text-center mb-4 bg-blue-500/10 border border-blue-500/20';
+    if (lbl) { lbl.textContent='Valor Exato!'; lbl.className='text-[9px] uppercase font-black tracking-widest mb-1 text-blue-400'; }
+    if (val) { val.textContent='Sem troco 👌'; val.className='text-2xl font-black text-blue-400'; }
+    if (btn) { btn.disabled=false; btn.className=btn.className.replace('bg-slate-800 text-slate-500 cursor-not-allowed','bg-emerald-600 text-white cursor-pointer'); }
+  } else {
+    box.className = 'rounded-2xl p-4 text-center mb-4 bg-emerald-500/10 border border-emerald-500/20';
+    if (lbl) { lbl.textContent='Troco'; lbl.className='text-[9px] uppercase font-black tracking-widest mb-1 text-emerald-400'; }
+    if (val) { val.textContent=Utils.formatCurrency(troco); val.className='text-3xl font-black text-emerald-400'; }
+    if (btn) { btn.disabled=false; btn.className=btn.className.replace('bg-slate-800 text-slate-500 cursor-not-allowed','bg-emerald-600 text-white cursor-pointer'); }
+  }
+}
+
+function confirmarDinheiro() {
+  const total    = CartService.getTotal();
+  const recebido = parseFloat(document.getElementById('trocoRecebido')?.value)||0;
+  if (recebido < total) { UIService.showToast('Valor insuficiente','','error'); return; }
+  UIService.closeModal('modalTroco');
+  const troco = recebido - total;
+  finalizarVenda(`Dinheiro`, troco);
+}
+
+/* ══ PAGAMENTO MISTO ══ */
+function abrirPagamentoMisto() {
+  UIService.closeModal('modalPagamento');
+  const total = CartService.getTotal();
+  _setText('mistoTotalLabel', `Total: ${Utils.formatCurrency(total)}`);
+  document.getElementById('mistoDinheiro').value = '';
+  document.getElementById('mistoRestanteBox')?.classList.add('hidden');
+  ['btnMistoPix','btnMistoDebito','btnMistoCredito'].forEach(id => {
+    const b = document.getElementById(id); if(b) b.disabled = true;
+  });
+  UIService.openModal('modalMisto');
+  setTimeout(()=>document.getElementById('mistoDinheiro')?.focus(),200);
+}
+
+function calcMisto() {
+  const total     = CartService.getTotal();
+  const dinheiro  = parseFloat(document.getElementById('mistoDinheiro')?.value)||0;
+  const restante  = total - dinheiro;
+  const box       = document.getElementById('mistoRestanteBox');
+  const ok        = dinheiro > 0 && dinheiro < total;
+  if (box) box.classList.toggle('hidden', !ok);
+  if (ok) _setText('mistoRestante', Utils.formatCurrency(restante));
+  ['btnMistoPix','btnMistoDebito','btnMistoCredito'].forEach(id => {
+    const b = document.getElementById(id); if(b) b.disabled = !ok;
+  });
+}
+
+function confirmarMisto(formaRestante) {
+  const total    = CartService.getTotal();
+  const dinheiro = parseFloat(document.getElementById('mistoDinheiro')?.value)||0;
+  if (dinheiro <= 0 || dinheiro >= total) { UIService.showToast('Valor inválido','','error'); return; }
+  const restante = +(total - dinheiro).toFixed(2);
+  UIService.closeModal('modalMisto');
+  finalizarVenda(`Dinheiro+${formaRestante}`, 0, dinheiro, formaRestante, restante);
+}
+
+/* ══ FIADO COM CLIENTE ══ */
+function abrirSelecionarCliente() {
+  UIService.closeModal('modalPagamento');
+  document.getElementById('buscaClienteFiado').value = '';
+  renderClientesFiado();
+  UIService.openModal('modalFiadoCliente');
+}
+
+function renderClientesFiado() {
+  const busca = (document.getElementById('buscaClienteFiado')?.value||'').toLowerCase();
+  let clientes = Store.getFiado().filter(c => !c.bloqueado);
+  if (busca) clientes = clientes.filter(c=>(c.nome||'').toLowerCase().includes(busca));
+  const el = document.getElementById('listaClientesFiado');
+  if (!el) return;
+  if (clientes.length === 0) {
+    el.innerHTML = `<p class="text-[10px] text-slate-500 text-center py-6 font-bold">Nenhum cliente disponível</p>`; return;
+  }
+  el.innerHTML = clientes.map(c => {
+    const saldo = c.saldo||0;
+    const limiteTxt = c.limite > 0 ? ` | Limite: ${Utils.formatCurrency(c.limite)}` : '';
+    return `<div class="cli-opt" onclick="confirmarFiado('${c.id}')">
+      <div class="flex justify-between items-center">
+        <div>
+          <p class="text-[12px] font-black text-white">${c.nome}</p>
+          <p class="text-[9px] text-slate-500 font-bold">Saldo devedor: ${Utils.formatCurrency(saldo)}${limiteTxt}</p>
+        </div>
+        <i class="fas fa-chevron-right text-slate-600 text-xs"></i>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function confirmarFiado(clienteId) {
+  const cliente = Store.getFiado().find(c=>c.id===clienteId);
+  if (!cliente) return;
+  // Verifica limite
+  const total = CartService.getTotal();
+  if (cliente.limite > 0 && (cliente.saldo||0) + total > cliente.limite) {
+    UIService.showToast('Limite insuficiente', `Limite: ${Utils.formatCurrency(cliente.limite)}`, 'error'); return;
+  }
+  UIService.closeModal('modalFiadoCliente');
+  // Lança no fiado do cliente
+  Store.mutateFiado(fiado => {
+    const c = fiado.find(x=>x.id===clienteId);
+    if (!c) return;
+    c.saldo = (c.saldo||0) + total;
+    if (!Array.isArray(c.movimentacoes)) c.movimentacoes = [];
+    const itensDesc = CartService.getItems().map(i=>`${i.nome} x${i.qtd}`).join(', ');
+    c.movimentacoes.unshift({ id:Utils.generateId(), tipo:'fiado', descricao:itensDesc||'Compra PDV', valor:total, criadoEm:new Date().toISOString() });
+    if (c.limite>0 && c.saldo >= c.limite) c.bloqueado = true;
+  });
+  EventBus.emit('fiado:lancado', { cliente: cliente.nome, valor: total, obs: 'Venda PDV' });
+  finalizarVenda(`Fiado — ${cliente.nome}`);
+}
+
+/* ══ FINALIZAR VENDA ══ */
+function finalizarVenda(forma, troco = 0, parcelaDinheiro = 0, formaRestante = '', parcelaRestante = 0) {
+  if (CartService.isEmpty()) return;
+  const venda = CartService.finalize(forma);
+  if (!venda) return;
+  venda._troco = troco;
+  venda._parcelaDinheiro = parcelaDinheiro;
+  venda._parcelaRestante = parcelaRestante;
+  venda._formaRestante   = formaRestante;
+  _ultimaVenda = venda;
+  mostrarRecibo(venda);
+  renderCatalogo();
+  atualizarAlerta();
+  UIService.showToast('Venda concluída!', Utils.formatCurrency(venda.total), 'success');
+}
+
+/* ══ CANCELAR VENDA ══ */
+function cancelarUltimaVenda() {
+  if (!_ultimaVenda) return;
+  if (!confirm(`Cancelar venda de ${Utils.formatCurrency(_ultimaVenda.total)}?\nO estoque será restaurado.`)) return;
+  // Restaurar estoque
+  Store.mutateEstoque(estoque => {
+    (_ultimaVenda.itens||[]).forEach(item => {
+      const prod = estoque.find(p=>p.id===item.prodId);
+      if (!prod) return;
+      const qtdDev = item.label === 'UNID' ? item.qtd : item.qtd * (prod.packs?.find(pk=>pk.label===item.label)?.qtd||1);
+      prod.qtdUn = (prod.qtdUn||0) + qtdDev;
+    });
+  });
+  // Remove venda
+  Store.mutateVendas(vendas => {
+    const idx = vendas.findIndex(v=>v.id===_ultimaVenda.id);
+    if (idx >= 0) vendas.splice(idx,1);
+  });
+  // Se foi fiado, reverte saldo
+  if ((_ultimaVenda.formaPgto||'').startsWith('Fiado')) {
+    const nomeCliente = _ultimaVenda.formaPgto.replace('Fiado — ','').trim();
+    Store.mutateFiado(fiado => {
+      const c = fiado.find(x=>x.nome===nomeCliente);
+      if (!c) return;
+      c.saldo = Math.max(0,(c.saldo||0)-_ultimaVenda.total);
+      if (!Array.isArray(c.movimentacoes)) c.movimentacoes=[];
+      c.movimentacoes.unshift({ id:Utils.generateId(), tipo:'cancelamento', descricao:'Cancelamento PDV', valor:_ultimaVenda.total, criadoEm:new Date().toISOString() });
+      if (c.saldo <= 0) c.bloqueado = false;
+    });
+  }
+  UIService.closeModal('modalVenda');
+  UIService.showToast('Venda cancelada','Estoque restaurado','warning');
+  _ultimaVenda = null;
+  renderCatalogo();
+  atualizarAlerta();
+}
+
+/* ══ RECIBO ══ */
+function mostrarRecibo(venda) {
+  const itensEl   = document.getElementById('recItens');
+  const descRow   = document.getElementById('recDescRow');
+  const descEl    = document.getElementById('recDesc');
+  const trocoRow  = document.getElementById('recTrocoRow');
+  const trocoEl   = document.getElementById('recTroco');
+  if (itensEl) itensEl.innerHTML = venda.itens.map(i =>
+    `<div class="flex justify-between text-[10px] font-bold">
+      <span class="text-slate-300">${i.nome} <span class="text-slate-500">${i.label} ×${i.qtd}</span></span>
+      <span class="text-white">${Utils.formatCurrency(i.preco*i.qtd)}</span>
+    </div>`).join('');
+  if (venda.desconto>0 && descRow && descEl) { descRow.classList.remove('hidden'); descEl.textContent='-'+Utils.formatCurrency(venda.desconto); }
+  else descRow?.classList.add('hidden');
+  if (venda._troco > 0 && trocoRow && trocoEl) { trocoRow.classList.remove('hidden'); trocoEl.textContent=Utils.formatCurrency(venda._troco); }
+  else trocoRow?.classList.add('hidden');
+  _setText('recTotal', Utils.formatCurrency(venda.total));
+  _setText('recPgto', venda.formaPgto);
+  _setText('recHora', `${venda.data} ${venda.hora}`);
+  UIService.openModal('modalVenda');
+}
+
+function _gerarTextoRecibo(venda) {
+  const cfg  = Store.getConfig();
+  const nome = cfg?.nome||'CH Geladas';
+  const sep  = '─'.repeat(36);
+  let txt = `${nome}\nCOMPROVANTE DE VENDA\n${sep}\nData: ${venda.data} ${venda.hora}\n${sep}\n`;
+  venda.itens.forEach(i => { txt += `${i.nome} (${i.label}) x${i.qtd}\n  ${Utils.formatCurrency(i.preco*i.qtd)}\n`; });
+  txt += `${sep}\n`;
+  if (venda.desconto>0) txt += `Desconto: -${Utils.formatCurrency(venda.desconto)}\n`;
+  txt += `TOTAL: ${Utils.formatCurrency(venda.total)}\nPgto: ${venda.formaPgto}\n`;
+  if (venda._troco > 0) txt += `Troco: ${Utils.formatCurrency(venda._troco)}\n`;
+  txt += `${sep}\nObrigado!`;
+  return txt;
+}
+
+function enviarWhatsapp() {
+  if (!_ultimaVenda) return;
+  const num = (Store.getConfig()?.whatsapp||'').replace(/\D/g,'');
+  if (!num) { UIService.showToast('WhatsApp não configurado','Configure em Dados','warning'); return; }
+  Utils.openWhatsApp(num, _gerarTextoRecibo(_ultimaVenda));
+}
+function copiarRecibo() { if (!_ultimaVenda) return; Utils.copyToClipboard(_gerarTextoRecibo(_ultimaVenda)).then(()=>UIService.showToast('Copiado!','','success')); }
+function baixarRecibo() { if (!_ultimaVenda) return; Utils.downloadBlob(_gerarTextoRecibo(_ultimaVenda),'text/plain;charset=utf-8;',`venda_${_ultimaVenda.dataCurta}.txt`); }
+
+/* ══ RELATÓRIO ══ */
+function abrirRelatorio() {
+  const vendas = Store.getVendasHoje();
+  const fatur  = vendas.reduce((s,v)=>s+v.total,0);
+  const lucro  = vendas.reduce((s,v)=>s+(v.lucro||0),0);
+  const ticket = vendas.length ? fatur/vendas.length : 0;
+  _setText('relFaturamento', Utils.formatCurrency(fatur));
+  _setText('relLucro',       Utils.formatCurrency(lucro));
+  _setText('relQtd',         vendas.length);
+  _setText('relTicket',      Utils.formatCurrency(ticket));
+  _setText('relData',        `Hoje — ${Utils.today()}`);
+  const pgtos = {};
+  vendas.forEach(v => { pgtos[v.formaPgto] = (pgtos[v.formaPgto]||0)+v.total; });
+  document.getElementById('relPorPgto').innerHTML = Object.entries(pgtos).sort((a,b)=>b[1]-a[1])
+    .map(([f,t])=>`<div class="flex items-center justify-between bg-slate-900/60 border border-white/5 rounded-xl px-3 py-2"><span class="text-[10px] font-black text-slate-300">${f}</span><span class="text-[10px] font-black text-blue-400">${Utils.formatCurrency(t)}</span></div>`).join('')
+    ||'<p class="text-[9px] text-slate-600 text-center py-2 font-bold">Sem vendas</p>';
+  const prods = {};
+  vendas.forEach(v=>v.itens.forEach(i=>{ prods[i.nome]=(prods[i.nome]||0)+i.qtd; }));
+  const top   = Object.entries(prods).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const icons = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+  document.getElementById('relTopProd').innerHTML = top.map(([nome,qtd],i)=>
+    `<div class="flex items-center justify-between bg-slate-900/60 border border-white/5 rounded-xl px-3 py-2"><span class="text-[10px] font-black text-slate-300">${icons[i]} ${nome}</span><span class="text-[10px] font-black text-amber-400">${qtd} un</span></div>`).join('')
+    ||'<p class="text-[9px] text-slate-600 text-center py-2 font-bold">Sem itens</p>';
+  document.getElementById('relHistorico').innerHTML = [...vendas].reverse().map(v=>`
+    <div class="bg-slate-900/60 border border-white/5 rounded-xl px-3 py-2 flex justify-between items-center">
+      <div>
+        <p class="text-[10px] font-black text-white">${Utils.formatCurrency(v.total)}</p>
+        <p class="text-[8px] text-slate-500 font-bold">${v.hora} · ${v.formaPgto}</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="badge b-blue text-[8px]">${v.itens.length} item${v.itens.length>1?'s':''}</span>
+        <button onclick="cancelarVendaHistorico('${v.id}')" class="w-6 h-6 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 flex items-center justify-center adm-only" title="Cancelar"><i class="fas fa-times text-[8px]"></i></button>
+      </div>
+    </div>`).join('')||'<p class="text-[9px] text-slate-600 text-center py-4 font-bold">Sem vendas hoje</p>';
+  UIService.openModal('modalRelatorio');
+}
+
+function cancelarVendaHistorico(vendaId) {
+  const venda = Store.getVendas().find(v=>v.id===vendaId);
+  if (!venda) return;
+  if (!confirm(`Cancelar venda de ${Utils.formatCurrency(venda.total)}?`)) return;
+  Store.mutateEstoque(estoque => {
+    (venda.itens||[]).forEach(item => {
+      const prod = estoque.find(p=>p.id===item.prodId);
+      if (!prod) return;
+      const qtdDev = item.label==='UNID'?item.qtd:item.qtd*(prod.packs?.find(pk=>pk.label===item.label)?.qtd||1);
+      prod.qtdUn = (prod.qtdUn||0)+qtdDev;
+    });
+  });
+  Store.mutateVendas(vendas => { const idx=vendas.findIndex(v=>v.id===vendaId); if(idx>=0) vendas.splice(idx,1); });
+  UIService.showToast('Venda cancelada','','warning');
+  abrirRelatorio();
+}
+
+function _gerarTextoRelatorio() {
+  const vendas = Store.getVendasHoje();
+  const fatur  = vendas.reduce((s,v)=>s+v.total,0);
+  const lucro  = vendas.reduce((s,v)=>s+(v.lucro||0),0);
+  const cfg    = Store.getConfig();
+  const nome   = cfg?.nome||'CH Geladas';
+  const sep    = '═'.repeat(40); const sep2='─'.repeat(40);
+  let txt = `${sep}\n  ${nome} — RELATÓRIO DO DIA\n  ${Utils.today()}\n${sep}\n\n`;
+  txt += `Faturamento:  ${Utils.formatCurrency(fatur)}\n`;
+  txt += `Lucro:        ${Utils.formatCurrency(lucro)}\n`;
+  txt += `Nº Vendas:    ${vendas.length}\n`;
+  txt += `Ticket Médio: ${Utils.formatCurrency(vendas.length?fatur/vendas.length:0)}\n\n`;
+  txt += `${sep2}\nVENDAS INDIVIDUAIS\n${sep2}\n`;
+  vendas.forEach((v,i) => {
+    txt += `\n#${i+1} | ${v.hora} | ${v.formaPgto}\n`;
+    v.itens.forEach(it=>txt+=`  · ${it.nome} x${it.qtd}  ${Utils.formatCurrency(it.preco*it.qtd)}\n`);
+    txt += `  TOTAL: ${Utils.formatCurrency(v.total)}\n`;
+  });
+  txt += `\n${sep}\nGerado por ${nome} PDV\n${sep}\n`;
+  return txt;
+}
+
+function copiarRelatorio() {
+  Utils.copyToClipboard(_gerarTextoRelatorio()).then(()=>UIService.showToast('Relatório copiado!','','success'));
+}
+function baixarRelatorio() {
+  Utils.downloadBlob(_gerarTextoRelatorio(),'text/plain;charset=utf-8;',`relatorio_${Utils.todayISO()}.txt`);
+  UIService.showToast('Relatório salvo!','','success');
+}
+async function enviarRelatorioTelegram() {
+  const ok = await TelegramService.enviar('📊 <b>RELATÓRIO DO DIA — CH Geladas</b>\n' + _gerarTextoRelatorio().replace(/═|─/g,'─').substring(0,3000));
+  UIService.showToast(ok?'Enviado ao Telegram!':'Falha no envio',ok?'':'Configure o Telegram em Configurações',ok?'success':'error');
+}
+
+/* ══ ALERTAS ══ */
+function atualizarAlerta() {
+  const total = Store.getLowStock().length + Store.getOutOfStock().length;
+  const btn = document.getElementById('alertBtn');
+  if (btn) btn.classList.toggle('hidden', total===0);
+  _setText('alertCount', total);
+  const dot = document.getElementById('syncDot');
+  if (dot) dot.style.display = Store.getEstoque().length>0?'block':'none';
+}
+function verEstoqueBaixo() {
+  const lista = [...Store.getOutOfStock().map(p=>`❌ ${p.nome} (Esgotado)`), ...Store.getLowStock().map(p=>`⚠️ ${p.nome} (${p.qtdUn} un)`)];
+  alert('ALERTA DE ESTOQUE\n\n' + lista.join('\n'));
+}
+
+/* ══ UTILS ══ */
+function _setText(id,val) { const el=document.getElementById(id); if(el) el.textContent=val; }
+
+/* ══ INIT SESSÃO ══ */
+window.addEventListener('DOMContentLoaded', () => {
+  if (AuthService.isLogged()) {
+    document.getElementById('lock').classList.add('hidden');
+    document.getElementById('app').classList.remove('hidden');
+    if (AuthService.isAdmin()) document.body.classList.add('is-admin');
+    const rt = document.getElementById('roleTag');
+    if (rt) { rt.textContent = AuthService.isAdmin()?'ADM':'PDV'; rt.classList.remove('hidden'); }
+    init();
+  }
+});
+</script>
+</body>
+</html>
