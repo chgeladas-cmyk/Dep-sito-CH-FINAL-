@@ -262,9 +262,15 @@ const Store = (() => {
     const final = (limit && Array.isArray(data)) ? data.slice(0, limit) : data;
     _write(col, final);
     _notify(col);
-    // Notifica SyncQueue se disponível (carregado depois)
-    if (window.CH?.SyncQueue) window.CH.SyncQueue.enqueue('salvar', col, final);
-    else window._pendingSync?.push(col);
+    // Só enfileira se o usuário logado tem permissão de escrita nesta coleção.
+    // Enfileirar sem permissão geraria retries inúteis que o Firestore rejeita.
+    if (window.CH?.SyncQueue) {
+      const role = typeof AuthService !== 'undefined' ? AuthService.getRole() : null;
+      const perm = role && (CONSTANTS.PERMISSOES[role]?.escrever?.includes(col) ?? false);
+      if (perm) window.CH.SyncQueue.enqueue('salvar', col, final);
+    } else {
+      window._pendingSync?.push(col);
+    }
   }
 
   function _migrarLegacy() {
