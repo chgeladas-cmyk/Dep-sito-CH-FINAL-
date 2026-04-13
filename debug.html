@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Debug — CH Geladas</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: sans-serif; background: #0f172a; color: #e2e8f0; padding: 1rem; }
+h2 { color: #10b981; margin-bottom: 1rem; font-size: 1.1rem; }
+.card {
+  background: #1e293b; border: 1px solid #334155;
+  border-radius: .75rem; padding: 1rem; margin-bottom: 1rem;
+}
+.card h3 { font-size: .8rem; color: #64748b; margin-bottom: .5rem; text-transform: uppercase; }
+pre {
+  font-family: monospace; font-size: .78rem;
+  white-space: pre-wrap; word-break: break-all;
+  color: #10b981; max-height: 250px; overflow-y: auto;
+}
+.err { color: #ef4444; }
+.warn { color: #f59e0b; }
+.ok { color: #10b981; }
+.btn {
+  display: block; width: 100%; padding: .85rem 1rem;
+  background: #0f172a; border: 1px solid #10b981;
+  border-radius: .75rem; color: #10b981;
+  font-size: .95rem; cursor: pointer; margin-bottom: .75rem;
+}
+.btn-red { border-color: #ef4444; color: #ef4444; }
+hr { border-color: #334155; margin: 1rem 0; }
+</style>
+</head>
+<body>
+<h2>🔧 Debug — CH Geladas Sync</h2>
+
+<button class="btn" onclick="runAll()">▶ Rodar diagnóstico completo</button>
+
+<div id="out"></div>
+
+<hr>
+<button class="btn btn-red" onclick="limparFila()">🗑 Limpar fila de sync (emergência)</button>
+<button class="btn btn-red" onclick="resetProcessando()">🔄 Resetar itens "processando"</button>
+
+<script>
+const SYNC_KEY    = 'CH_SYNC_QUEUE';
+const SESSION_KEY = 'CH_SESSION';
+
+function card(title, content, cls) {
+  return '<div class="card"><h3>' + title + '</h3><pre class="' + (cls||'') + '">' + content + '</pre></div>';
+}
+
+function runAll() {
+  const out = [];
+
+  // 1. Sessao
+  try {
+    const s = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
+    out.push(card('Sessao', s ? JSON.stringify(s, null, 2) : 'Nenhuma sessao ativa', s ? 'ok' : 'err'));
+  } catch(e) { out.push(card('Sessao', 'Erro: ' + e.message, 'err')); }
+
+  // 2. Fila de sync
+  try {
+    const q = JSON.parse(localStorage.getItem(SYNC_KEY) || '[]');
+    const pendentes   = q.filter(i => i.status === 'pendente');
+    const processando = q.filter(i => i.status === 'processando');
+    const erros       = q.filter(i => i.status === 'erro');
+
+    let txt = 'Total: ' + q.length + '  Pendentes: ' + pendentes.length + '  Processando: ' + processando.length + '  Erros: ' + erros.length + '\n\n';
+
+    if (processando.length) {
+      txt += 'PRESO como processando:\n';
+      processando.forEach(i => { txt += '  ' + i.colecao + ' — ' + i.timestamp + '\n'; });
+      txt += '\n';
+    }
+    if (erros.length) {
+      txt += 'ERROS:\n';
+      erros.forEach(i => { txt += '  ' + i.colecao + ': ' + i.ultimoErro + '\n'; });
+      txt += '\n';
+    }
+    if (pendentes.length) {
+      txt += 'PENDENTES:\n';
+      pendentes.forEach(i => { txt += '  ' + i.colecao + ' tentativas:' + i.tentativas + '\n  ultimoErro: ' + (i.ultimoErro||'nenhum') + '\n'; });
+    }
+
+    const cls = erros.length || processando.length ? 'err' : pendentes.length ? 'warn' : 'ok';
+    out.push(card('Fila de Sync', txt.trim(), cls));
+  } catch(e) { out.push(card('Fila de Sync', 'Erro: ' + e.message, 'err')); }
+
+  // 3. window.CH
+  try {
+    const ch = window.CH;
+    if (!ch) {
+      out.push(card('window.CH', 'NAO ENCONTRADO — core.js carregou?', 'err'));
+    } else {
+      const info = {
+        FirebaseReady: ch.FirebaseService ? ch.FirebaseService.isReady() : 'sem FirebaseService',
+        UID:           ch.FirebaseService ? ch.FirebaseService.getUID() : 'N/A',
+        Role:          ch.AuthService    ? ch.AuthService.getRole()    : 'N/A',
+        SyncQueueOk:   !!ch.SyncQueue,
+      };
+      out.push(card('window.CH', JSON.stringify(info, null, 2), info.FirebaseReady === true ? 'ok' : 'warn'));
+    }
+  } catch(e) { out.push(card('window.CH', 'Erro: ' + e.message, 'err')); }
+
+  // 4. Online
+  out.push(card('Conexao', 'navigator.onLine: ' + navigator.onLine, navigator.onLine ? 'ok' : 'err'));
+
+  document.getElementById('out').innerHTML = out.join('');
+}
+
+function limparFila() {
+  if (!confirm('Limpar fila? Dados nao sincronizados serao perdidos.')) return;
+  localStorage.removeItem(SYNC_KEY);
+  alert('Fila limpa. Recarregue o app.');
+}
+
+function resetProcessando() {
+  try {
+    const q = JSON.parse(localStorage.getItem(SYNC_KEY) || '[]');
+    let n = 0;
+    q.forEach(i => { if (i.status === 'processando') { i.status = 'pendente'; i.proximaTentativa = Date.now(); n++; } });
+    localStorage.setItem(SYNC_KEY, JSON.stringify(q));
+    alert(n + ' item(ns) resetados. Recarregue o app.');
+  } catch(e) { alert('Erro: ' + e.message); }
+}
+
+runAll();
+</script>
+</body>
+</html>
