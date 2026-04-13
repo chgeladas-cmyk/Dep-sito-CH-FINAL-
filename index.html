@@ -776,7 +776,8 @@ function iniciarHub() {
     _atualizarGraficoSemanal();
   });
 
-  EventBus.on('sync:ok',        () => _setSyncDot('ok', 'Sincronizado com Firebase'));
+  EventBus.on('sync:ok',    () => { _setSyncDot('ok', 'Sincronizado com Firebase'); _atualizarSyncStatus(); });
+  EventBus.on('sync:error', () => { _atualizarSyncStatus(); });
   EventBus.on('firebase:ready', () => _setSyncDot('ok', 'Firebase conectado'));
 
   // Tenta conectar Firebase e carrega dados
@@ -786,7 +787,7 @@ function iniciarHub() {
       // Inicia listeners em tempo real (estoque/config chegam automaticamente)
       FirebaseService.subscribeRealtime();
       // Pull inicial para carregar todos os dados permitidos pela role
-      setTimeout(() => SyncService.pull(), 500);
+      setTimeout(() => window.CH.SyncService.pull(), 500);
     } else {
       _setSyncDot('pending', 'Modo offline local');
     }
@@ -919,9 +920,25 @@ function _atualizarStats() {
   const sqCount = document.getElementById('syncQueueCount');
   if (sqBadge && window.CH?.SyncQueue) {
     const status = window.CH.SyncQueue.getStatus();
-    const pendentes = status.pendentes + status.processando;
+    const pendentes = status.pendentes + status.processando + status.erros;
     sqBadge.style.display = pendentes > 0 ? 'block' : 'none';
     if (sqCount) sqCount.textContent = pendentes;
+    // Mostra cor diferente se há erros definitivos
+    if (status.erros > 0 && status.pendentes === 0) {
+      sqBadge.style.color = '#ef4444';
+      sqBadge.style.borderColor = 'rgba(239,68,68,.35)';
+      sqBadge.style.background = 'rgba(239,68,68,.12)';
+      sqBadge.title = 'Clique para reenviar itens com erro';
+      sqBadge.style.cursor = 'pointer';
+      sqBadge.onclick = () => { window.CH.SyncQueue.reenviarErros(); _atualizarSyncStatus(); };
+    } else {
+      sqBadge.style.color = '#f59e0b';
+      sqBadge.style.borderColor = 'rgba(245,158,11,.25)';
+      sqBadge.style.background = 'rgba(245,158,11,.12)';
+      sqBadge.title = '';
+      sqBadge.style.cursor = 'default';
+      sqBadge.onclick = null;
+    }
   }
 }
 

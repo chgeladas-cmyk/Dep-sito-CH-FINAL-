@@ -248,7 +248,10 @@ const Store = (() => {
   if (_localOnly.has(col)) return;
   if (window.CH?.SyncQueue) {
     const role = typeof AuthService !== 'undefined' ? AuthService.getRole() : null;
-    const perm = role && (CONSTANTS.PERMISSOES[role]?.escrever?.includes(col) ?? false);
+    // FIX: inclui gerente e operador (UserService) além de admin/pdv (CONSTANTS.PERMISSOES)
+    const permCore    = role && (CONSTANTS.PERMISSOES[role]?.escrever?.includes(col) ?? false);
+    const permUserSvc = role && window.CH?.UserService?.podeEscrever?.(role, col);
+    const perm = permCore || permUserSvc;
     if (perm) window.CH.SyncQueue.enqueue('salvar', col, final);
   } else {
     window._pendingSync?.push(col);
@@ -714,11 +717,18 @@ const SyncService = (() => {
   }
 
   function push(col) {
-  if (!window.CH?.SyncQueue) {
-    _fila.add(col);
-    clearTimeout(_timer);
-    _timer = setTimeout(_flush, DEBOUNCE);
+  // Se SyncQueue está disponível, delega para ele (mais robusto, com retry)
+  if (window.CH?.SyncQueue) {
+    const dados = Store[`get${col.charAt(0).toUpperCase()+col.slice(1)}`]?.();
+    if (dados != null && _podeEscrever(col)) {
+      window.CH.SyncQueue.enqueue('salvar', col, dados);
+    }
+    return;
   }
+  // Fallback: fila interna simples (sem SyncQueue)
+  _fila.add(col);
+  clearTimeout(_timer);
+  _timer = setTimeout(_flush, DEBOUNCE);
   }
 
   async function _flush() {
@@ -811,7 +821,7 @@ const AuthService = {
     FirebaseService.clearAdminToken();
   }
   setTimeout(() => FirebaseService.init().then(() => FirebaseService.subscribeRealtime()), 300);
-  setTimeout(() => SyncService.pull(), 800);
+  setTimeout(() => { SyncService.pull(); if (window.CH?.SyncQueue) window.CH.SyncQueue.processar(); }, 800);
 
   setTimeout(() => {
     const uso = Store.getLocalStorageUsage();
